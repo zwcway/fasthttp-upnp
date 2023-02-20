@@ -240,7 +240,7 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			}
 		case DataTypeInt32:
 			var i uint64
-			i, err = checkRequestInt(reqArg, *al, ar, false, 32)
+			i, err = checkRequestInt(reqArg, al, ar, false, 32)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
 				return soap.NewErrorf(fasthttp.StatusBadRequest, "int32 value %s=%s %s", arg.Name, reqArg, err.Error())
@@ -248,7 +248,7 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			arv.SetInt(int64(i))
 		case DataTypeUint32:
 			var i uint64
-			i, err = checkRequestInt(reqArg, *al, ar, true, 32)
+			i, err = checkRequestInt(reqArg, al, ar, true, 32)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
 				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint32 value %s=%s %s", arg.Name, reqArg, err.Error())
@@ -256,7 +256,7 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			arv.SetUint(i)
 		case DataTypeInt16:
 			var i uint64
-			i, err = checkRequestInt(reqArg, *al, ar, true, 16)
+			i, err = checkRequestInt(reqArg, al, ar, true, 16)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
 				return soap.NewErrorf(fasthttp.StatusBadRequest, "int16 value %s=%s %s", arg.Name, reqArg, err.Error())
@@ -264,7 +264,7 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			arv.SetInt(int64(i))
 		case DataTypeUInt16:
 			var i uint64
-			i, err = checkRequestInt(reqArg, *al, ar, true, 16)
+			i, err = checkRequestInt(reqArg, al, ar, true, 16)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
 				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint16 value %s=%s %s", arg.Name, reqArg, err.Error())
@@ -323,9 +323,9 @@ func sliceRemoveRepeatByLoop(slc []*scpd.Variable) []*scpd.Variable {
 	return result
 }
 
-func checkRequestInt(reqArg string, al []string, ar *scpd.AllowRange, unsigned bool, bits int) (uint64, error) {
+func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned bool, bits int) (uint64, error) {
 	if al != nil {
-		for _, v := range al {
+		for _, v := range *al {
 			if v == reqArg {
 				if unsigned {
 					return strconv.ParseUint(reqArg, 0, bits)

@@ -187,7 +187,6 @@ func (s *DeviceServer) Close() {
 	for _, ss := range s.ServiceList {
 		ss.DeInit()
 	}
-	close(s.ErrorChan)
 	s.conn.Close()
 	s.conn = nil
 }

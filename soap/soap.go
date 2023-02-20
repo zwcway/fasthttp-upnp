@@ -56,6 +56,7 @@ func ParseSOAPAction(s string) (ret *SoapAction, err error) {
 		err = fmt.Errorf("soap action not found: %s", s)
 		return
 	}
+	ret = &SoapAction{}
 	ret.Action = s[hashIndex+1:]
 	ret.ServiceURN, err = ParseServiceURN(s[:hashIndex])
 	return

@@ -107,7 +107,7 @@ func (s *ssdpServer) Init() error {
 
 	s.addrs = s.interfaceAddrs(s.iface)
 	if s.addrs == nil {
-		return fmt.Errorf("there are no address on interface %s", s.iface.Name)
+		return &InterfaceError{s.iface}
 	}
 
 	return nil
@@ -134,23 +134,24 @@ func (s *ssdpServer) Close() {
 	}
 	s.signal <- 1 // 一切阻塞终将退出
 
-	s.sendByeBye()
 	close(s.signal)
-	close(s.ErrChan)
-	s.conn.Close()
-	s.conn = nil
 	s.signal = nil
-	s.ErrChan = nil
+
+	if s.conn != nil {
+		s.sendByeBye()
+		s.conn.Close()
+		s.conn = nil
+	}
 }
 
 func (s *ssdpServer) ListenAndServe() error {
+	if s.signal == nil {
+		return fmt.Errorf("please init ssdp server first")
+	}
 	var err error
 	s.listenAddr, err = net.ResolveUDPAddr("udp4", MulticastAddrPort)
 	if err != nil {
 		panic(err)
-	}
-	if s.addrs == nil {
-		return fmt.Errorf("please init ssdp server first")
 	}
 	s.conn, err = net.ListenMulticastUDP("udp", s.iface, s.listenAddr)
 	if err != nil {
@@ -313,6 +314,10 @@ func (s *ssdpServer) send(buf []byte, ip *net.UDPAddr, delay time.Duration) {
 		if delay > 0 {
 			select {
 			case <-time.After(delay):
+				if s.conn == nil {
+					// 拦截多个channel同时触发的情况
+					return
+				}
 			case <-s.signal:
 				return
 			case <-s.ctx.Done():

@@ -42,6 +42,14 @@ func (e *RequestError) Error() string {
 	return fmt.Sprintf("request error from %s '%s'", e.src.String(), e.err.Error())
 }
 
+type InterfaceError struct {
+	iface *net.Interface
+}
+
+func (e *InterfaceError) Error() string {
+	return fmt.Sprintf("the interface '%s' no address", e.iface.Name)
+}
+
 func IsIPDenyError(err error) bool {
 	if IsSSDPError(err) {
 		return true
@@ -58,5 +66,9 @@ func IsRequestError(err error) bool {
 }
 func IsSSDPError(err error) bool {
 	_, ok := err.(*SSDPError)
+	return ok
+}
+func IsInterfaceError(err error) bool {
+	_, ok := err.(*InterfaceError)
 	return ok
 }
