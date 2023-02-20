@@ -82,7 +82,7 @@ type Envelope struct {
 }
 type EnvelopeResponse struct {
 	XMLName       xml.Name     `xml:"s:Envelope"`
-	XMLSpace      string       `xml:"s,attr"`
+	XMLSpace      string       `xml:"xmlns:s,attr"`
 	EncodingStyle string       `xml:"encodingStyle,attr"`
 	Body          EnvelopeBody `xml:"s:Body"`
 }

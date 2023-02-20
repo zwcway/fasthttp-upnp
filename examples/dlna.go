@@ -7,15 +7,33 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/valyala/fasthttp"
 	upnp "github.com/zwcway/fasthttp-upnp"
 )
 
+var (
+	playUrl string
+	playDur int = 0
+	ticker  *time.Ticker
+)
+
+func playing(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			playDur++
+		}
+	}
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	upnpSrv, err := upnp.NewDeviceServer(ctx, "dlna server")
+	upnpSrv, err := upnp.NewDeviceServer(ctx, "我是DLNA")
 	if err != nil {
 		return
 	}
@@ -40,11 +58,43 @@ func main() {
 		return true
 	}
 
+	upnp.AVT_SetAVTransportURI.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+		in := input.(*upnp.AVTArgIn_SetAVTransportURI)
+
+		playUrl = in.CurrentURI
+
+		fmt.Println(in.InstanceID, in.CurrentURI)
+	}
+	upnp.AVT_GetPositionInfo.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+		out := output.(*upnp.AVTArgOut_GetPositionInfo)
+
+		playDur++
+
+		out.TrackDuration = fmt.Sprintf("00:00:%2d", playDur)
+
+		out.TrackURI = playUrl
+	}
+	upnp.AVT_Play.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+		playDur = 0
+		ticker.Reset(time.Second)
+	}
+	upnp.AVT_Pause.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+		ticker.Stop()
+	}
+	upnp.AVT_Stop.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+		playDur = 0
+		ticker.Stop()
+	}
+
 	err = upnpSrv.Init()
 	if err != nil {
 		panic(err)
 	}
 	go upnpSrv.Serve()
+
+	ticker = time.NewTicker(time.Second)
+	go playing(ctx)
+	ticker.Stop()
 
 	signalChan := make(chan os.Signal, 2)
 	signal.Notify(signalChan,

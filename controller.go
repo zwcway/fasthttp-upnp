@@ -162,7 +162,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 	action.Handler(action.ArgIn, action.ArgOut, ctx)
 
 	var resp []byte
-	resp, err = marshalActionResponse(&action.ArgOut)
+	resp, err = marshalActionResponse(action, c)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotImplemented)
 		return err
@@ -303,13 +303,16 @@ func unmarshalActionRequest(args any, body []byte) error {
 	return nil
 }
 
-func marshalActionResponse(args *any) (body []byte, err error) {
-	body, err = xml.Marshal(args)
+func marshalActionResponse(action *Action, c *Controller) (body []byte, err error) {
+	body, err = xml.Marshal(action.ArgOut)
 	if err != nil {
 		return
 	}
 
 	resp := soap.EnvelopeResponse{
+		XMLSpace:      ServiceNS(c.ServiceName, int(c.SpecVersion.Major)),
+		EncodingStyle: soap.EncodingStyle,
+
 		Body: soap.EnvelopeBody{
 			Action: body,
 		},
