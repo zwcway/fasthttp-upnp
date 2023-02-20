@@ -338,6 +338,8 @@ func (s *DeviceServer) ssdpRoutine(ifi *net.Interface, devices []string, service
 	ss.Services = services
 	ss.ErrChan = s.ErrorChan
 	ss.InterfaceAddrsFilter = InterfaceAddrsFilter
+	ss.AllowIps = s.AllowIps
+	ss.DenyIps = s.DenyIps
 
 	err = ss.Init()
 	if err != nil {
