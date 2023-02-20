@@ -44,3 +44,7 @@ func getListenAddress(iface *net.Interface, port uint16) (address string, err er
 
 	return fmt.Sprintf(":%d", port), nil
 }
+
+func ServiceNS(service string, ver int) string {
+	return fmt.Sprintf("urn:%s:service:%s:%d", AuthName, service, ver)
+}

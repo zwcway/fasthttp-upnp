@@ -13,7 +13,7 @@ import (
 	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
-type httpHandler func(c *Controller, ctx *fasthttp.RequestCtx)
+type httpHandler func(c *Controller, ctx *fasthttp.RequestCtx) error
 
 type Controller struct {
 	SpecVersion scpd.SpecVersion
@@ -76,7 +76,7 @@ func (c *Controller) init() (err error) {
 	)
 	for n, a := range c.Actions {
 		a.name = n
-		a.argInReflect = reflect.ValueOf(a.ArgIn)
+		a.argInReflect = reflect.ValueOf(&a.ArgIn).Elem().Elem().Elem()
 		args := []scpd.Argument{}
 		for _, g := range a.arguments {
 			args = append(args, scpd.Argument{
@@ -123,16 +123,17 @@ func ParseSOAPAction(ctx *fasthttp.RequestCtx) (*soap.SoapAction, error) {
 	return soap.ParseSOAPAction(string(ctx.Request.Header.Peek("SOAPACTION")))
 }
 
-func defaultSCPDHandler(c *Controller, ctx *fasthttp.RequestCtx) {
+func defaultSCPDHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 	ctx.Response.Header.SetContentType(ResponseContentTypeXML)
 	ctx.Write(c.scpdXML)
+	return nil
 }
 
-func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) {
+func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 	soapAction, err := ParseSOAPAction(ctx)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		return
+		return err
 	}
 
 	var action *Action
@@ -144,19 +145,24 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) {
 	}
 	if action == nil {
 		ctx.SetStatusCode(fasthttp.StatusUnauthorized)
-		return
+		return fmt.Errorf("unknown action '%s'", soapAction.Action)
 	}
 
 	err = unmarshalActionRequest(&action.ArgIn, ctx.Request.Body())
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		return
+		return err
 	}
 
 	err = parseRequestArguments(action, ctx)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		return
+		return err
+	}
+
+	if action.Handler == nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		return fmt.Errorf("the action '%s' handler is nil", action.name)
 	}
 
 	action.Handler(ctx)
@@ -165,28 +171,34 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) {
 	resp, err = marshalActionResponse(&action.ArgOut)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotImplemented)
-		return
+		return err
 	}
 
 	ctx.SetContentType(ResponseContentTypeXML)
 	ctx.Response.Header.Set("Ext", "")
 
 	ctx.Write(resp)
+
+	return nil
 }
 
-func defaultEventHandler(c *Controller, ctx *fasthttp.RequestCtx) {
+func defaultEventHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 	method := string(ctx.Method())
+
 	switch method {
 	case "SUBSCRIBE":
 		err := defaultSubscribeHandler(&c.Event, ctx)
 		if err != nil {
 			ResponseError(ctx, err)
 		}
+		return err
 	case "UNSUBSCRIBE":
 
 	default:
 		ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
 	}
+
+	return nil
 }
 
 func ResponseError(ctx *fasthttp.RequestCtx, e *soap.Error) error {
@@ -208,7 +220,15 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			continue
 		}
 		arv := action.argInReflect.FieldByName(arg.Name)
+
+		if !arv.IsValid() {
+			return soap.NewErrorf(fasthttp.StatusBadRequest, "argument '%s' not allowed", arg.Name)
+		}
+
 		reqArg := string(ctx.Request.Header.Peek(arg.Name))
+		if reqArg == "" {
+			reqArg = arg.RelatedStateVar.Default
+		}
 		al := arg.RelatedStateVar.AllowedValues
 		ar := arg.RelatedStateVar.AllowedRange
 		switch arg.RelatedStateVar.DataType {
@@ -282,7 +302,7 @@ func unmarshalActionRequest(args *any, body []byte) error {
 	if err != nil {
 		return err
 	}
-	err = xml.Unmarshal(env.Body.Action, args)
+	err = xml.Unmarshal(env.Body.Action, *args)
 	if err != nil {
 		return err
 	}
@@ -324,6 +344,9 @@ func sliceRemoveRepeatByLoop(slc []*scpd.Variable) []*scpd.Variable {
 }
 
 func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned bool, bits int) (uint64, error) {
+	if reqArg == "" {
+		reqArg = "0"
+	}
 	if al != nil {
 		for _, v := range *al {
 			if v == reqArg {
@@ -335,7 +358,7 @@ func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned 
 				}
 			}
 		}
-	} else if ar != nil {
+	} else {
 		var (
 			intv uint64
 			err  error
@@ -351,6 +374,9 @@ func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned 
 		}
 		if err != nil {
 			return 0, err
+		}
+		if ar == nil {
+			return intv, nil
 		}
 		step := ar.Step
 		if step < 1 {

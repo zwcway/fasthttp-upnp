@@ -213,20 +213,33 @@ func (s *DeviceServer) httpHandler(ctx *fasthttp.RequestCtx) {
 			return
 		}
 	}
+	allowed := s.AllowIps == nil
 	for _, ipnet := range s.AllowIps {
-		if !ipnet.Contains(remoteIp) {
-			ctx.SetStatusCode(fasthttp.StatusForbidden)
-			s.notifyError(ssdp.NewIPNotAllowError(remoteIp))
-			return
+		if ipnet.Contains(remoteIp) {
+			allowed = true
+			break
 		}
+	}
+	if !allowed {
+		ctx.SetStatusCode(fasthttp.StatusForbidden)
+		s.notifyError(ssdp.NewIPNotAllowError(remoteIp))
+		return
 	}
 
 	if s.BeforeRequestHandle != nil && !s.BeforeRequestHandle(ctx) {
 		return
 	}
-	if s.AfterRequestHandle != nil {
-		defer s.AfterRequestHandle(ctx)
-	}
+
+	var err error
+
+	defer func() {
+		if s.AfterRequestHandle != nil {
+			s.AfterRequestHandle(ctx)
+		}
+		if err != nil {
+			s.notifyError(err)
+		}
+	}()
 
 	uri := string(ctx.Path())
 
@@ -239,7 +252,7 @@ func (s *DeviceServer) httpHandler(ctx *fasthttp.RequestCtx) {
 				return
 			}
 			if c.SCPDHandler != nil {
-				c.SCPDHandler(c, ctx)
+				err = c.SCPDHandler(c, ctx)
 			} else {
 				ctx.SetStatusCode(fasthttp.StatusNotFound)
 			}
@@ -254,14 +267,14 @@ func (s *DeviceServer) httpHandler(ctx *fasthttp.RequestCtx) {
 				return
 			}
 			if c.ControlHandler != nil {
-				c.ControlHandler(c, ctx)
+				err = c.ControlHandler(c, ctx)
 			} else {
 				ctx.SetStatusCode(fasthttp.StatusNotFound)
 			}
 			return
 		case c.EventHttpPath():
 			if c.EventHandler != nil {
-				c.EventHandler(c, ctx)
+				err = c.EventHandler(c, ctx)
 			} else {
 				ctx.SetStatusCode(fasthttp.StatusNotFound)
 			}

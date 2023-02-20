@@ -30,7 +30,7 @@ func main() {
 			Actions:     upnp.AVTransportV1,
 		},
 	}
-	upnpSrv.ListenPort = 1900
+	// upnpSrv.ListenPort = 1900
 	upnpSrv.AllowIps = []*net.IPNet{
 		&net.IPNet{IP: net.ParseIP("10.2.2.24"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
 	}

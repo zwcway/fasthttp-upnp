@@ -259,11 +259,16 @@ func (s *ssdpServer) readRequestRoutine(buf []byte, src *net.UDPAddr) {
 			return
 		}
 	}
+	var allowed = s.AllowIps == nil
 	for _, ipnet := range s.AllowIps {
-		if !ipnet.Contains(src.IP) {
-			s.notifyError(NewIPNotAllowError(src.IP))
-			return
+		if ipnet.Contains(src.IP) {
+			allowed = true
+			break
 		}
+	}
+	if !allowed {
+		s.notifyError(NewIPNotAllowError(src.IP))
+		return
 	}
 
 	io := bufio.NewReader(bytes.NewReader(buf))

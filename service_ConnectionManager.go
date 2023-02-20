@@ -2,9 +2,7 @@ package upnp
 
 import (
 	"encoding/xml"
-
 	"github.com/zwcway/fasthttp-upnp/scpd"
-	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
 var CM_A_ARG_TYPE_AVTransportID = scpd.Variable{
@@ -61,7 +59,7 @@ var CM_SourceProtocolInfo = scpd.Variable{
 }
 
 type CMArgIn_ConnectionComplete struct {
-	XMLName      xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v ConnectionComplete"`
+	XMLName      xml.Name `xml:"urn:schemas-upnp-org:service:ConnectionManager:1 ConnectionComplete"`
 	ConnectionID int32
 }
 type CMArgOut_ConnectionComplete struct {
@@ -71,15 +69,15 @@ type CMArgOut_ConnectionComplete struct {
 
 var CM_ConnectionComplete = Action{
 	Handler: nil,
-	ArgIn:   CMArgIn_ConnectionComplete{},
-	ArgOut:  CMArgOut_ConnectionComplete{XMLPrefix: soap.ActionNS},
+	ArgIn:   &CMArgIn_ConnectionComplete{},
+	ArgOut:  &CMArgOut_ConnectionComplete{XMLPrefix: ServiceNS(ServiceName_ConnectionManager, 1)},
 	arguments: []Argument{
 		{"ConnectionID", DirIn, &CM_A_ARG_TYPE_ConnectionID},
 	},
 }
 
 type CMArgIn_GetCurrentConnectionIDs struct {
-	XMLName xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetCurrentConnectionIDs"`
+	XMLName xml.Name `xml:"urn:schemas-upnp-org:service:ConnectionManager:1 GetCurrentConnectionIDs"`
 }
 type CMArgOut_GetCurrentConnectionIDs struct {
 	XMLName       xml.Name `xml:"u:GetCurrentConnectionIDsResponse"`
@@ -89,15 +87,15 @@ type CMArgOut_GetCurrentConnectionIDs struct {
 
 var CM_GetCurrentConnectionIDs = Action{
 	Handler: nil,
-	ArgIn:   CMArgIn_GetCurrentConnectionIDs{},
-	ArgOut:  CMArgOut_GetCurrentConnectionIDs{XMLPrefix: soap.ActionNS},
+	ArgIn:   &CMArgIn_GetCurrentConnectionIDs{},
+	ArgOut:  &CMArgOut_GetCurrentConnectionIDs{XMLPrefix: ServiceNS(ServiceName_ConnectionManager, 1)},
 	arguments: []Argument{
 		{"ConnectionIDs", DirOut, &CM_CurrentConnectionIDs},
 	},
 }
 
 type CMArgIn_GetCurrentConnectionInfo struct {
-	XMLName      xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetCurrentConnectionInfo"`
+	XMLName      xml.Name `xml:"urn:schemas-upnp-org:service:ConnectionManager:1 GetCurrentConnectionInfo"`
 	ConnectionID int32
 }
 type CMArgOut_GetCurrentConnectionInfo struct {
@@ -114,8 +112,8 @@ type CMArgOut_GetCurrentConnectionInfo struct {
 
 var CM_GetCurrentConnectionInfo = Action{
 	Handler: nil,
-	ArgIn:   CMArgIn_GetCurrentConnectionInfo{},
-	ArgOut:  CMArgOut_GetCurrentConnectionInfo{XMLPrefix: soap.ActionNS},
+	ArgIn:   &CMArgIn_GetCurrentConnectionInfo{},
+	ArgOut:  &CMArgOut_GetCurrentConnectionInfo{XMLPrefix: ServiceNS(ServiceName_ConnectionManager, 1)},
 	arguments: []Argument{
 		{"ConnectionID", DirIn, &CM_A_ARG_TYPE_ConnectionID},
 		{"RcsID", DirOut, &CM_A_ARG_TYPE_RcsID},
@@ -129,7 +127,7 @@ var CM_GetCurrentConnectionInfo = Action{
 }
 
 type CMArgIn_GetProtocolInfo struct {
-	XMLName xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetProtocolInfo"`
+	XMLName xml.Name `xml:"urn:schemas-upnp-org:service:ConnectionManager:1 GetProtocolInfo"`
 }
 type CMArgOut_GetProtocolInfo struct {
 	XMLName   xml.Name `xml:"u:GetProtocolInfoResponse"`
@@ -140,8 +138,8 @@ type CMArgOut_GetProtocolInfo struct {
 
 var CM_GetProtocolInfo = Action{
 	Handler: nil,
-	ArgIn:   CMArgIn_GetProtocolInfo{},
-	ArgOut:  CMArgOut_GetProtocolInfo{XMLPrefix: soap.ActionNS},
+	ArgIn:   &CMArgIn_GetProtocolInfo{},
+	ArgOut:  &CMArgOut_GetProtocolInfo{XMLPrefix: ServiceNS(ServiceName_ConnectionManager, 1)},
 	arguments: []Argument{
 		{"Source", DirOut, &CM_SourceProtocolInfo},
 		{"Sink", DirOut, &CM_SinkProtocolInfo},
@@ -149,7 +147,7 @@ var CM_GetProtocolInfo = Action{
 }
 
 type CMArgIn_PrepareForConnection struct {
-	XMLName               xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v PrepareForConnection"`
+	XMLName               xml.Name `xml:"urn:schemas-upnp-org:service:ConnectionManager:1 PrepareForConnection"`
 	RemoteProtocolInfo    string
 	PeerConnectionManager string
 	PeerConnectionID      int32
@@ -165,8 +163,8 @@ type CMArgOut_PrepareForConnection struct {
 
 var CM_PrepareForConnection = Action{
 	Handler: nil,
-	ArgIn:   CMArgIn_PrepareForConnection{},
-	ArgOut:  CMArgOut_PrepareForConnection{XMLPrefix: soap.ActionNS},
+	ArgIn:   &CMArgIn_PrepareForConnection{},
+	ArgOut:  &CMArgOut_PrepareForConnection{XMLPrefix: ServiceNS(ServiceName_ConnectionManager, 1)},
 	arguments: []Argument{
 		{"RemoteProtocolInfo", DirIn, &CM_A_ARG_TYPE_ProtocolInfo},
 		{"PeerConnectionManager", DirIn, &CM_A_ARG_TYPE_ConnectionManager},

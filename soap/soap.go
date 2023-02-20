@@ -10,7 +10,6 @@ import (
 const (
 	EncodingStyle = "http://schemas.xmlsoap.org/soap/encoding/"
 	EnvelopeNS    = "http://schemas.xmlsoap.org/soap/envelope/"
-	ActionNS      = "urn:schemas-upnp-org:service:serviceType:v"
 )
 
 type ServiceURN struct {

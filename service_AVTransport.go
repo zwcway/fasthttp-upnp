@@ -2,9 +2,7 @@ package upnp
 
 import (
 	"encoding/xml"
-
 	"github.com/zwcway/fasthttp-upnp/scpd"
-	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
 var AVT_AVTransportURI = scpd.Variable{
@@ -171,7 +169,7 @@ var AVT_TransportStatus = scpd.Variable{
 }
 
 type AVTArgIn_GetCurrentTransportActions struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetCurrentTransportActions"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetCurrentTransportActions"`
 	InstanceID uint32
 }
 type AVTArgOut_GetCurrentTransportActions struct {
@@ -182,8 +180,8 @@ type AVTArgOut_GetCurrentTransportActions struct {
 
 var AVT_GetCurrentTransportActions = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetCurrentTransportActions{},
-	ArgOut:  AVTArgOut_GetCurrentTransportActions{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetCurrentTransportActions{},
+	ArgOut:  &AVTArgOut_GetCurrentTransportActions{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"Actions", DirOut, &AVT_CurrentTransportActions},
@@ -191,7 +189,7 @@ var AVT_GetCurrentTransportActions = Action{
 }
 
 type AVTArgIn_GetDeviceCapabilities struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetDeviceCapabilities"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetDeviceCapabilities"`
 	InstanceID uint32
 }
 type AVTArgOut_GetDeviceCapabilities struct {
@@ -204,8 +202,8 @@ type AVTArgOut_GetDeviceCapabilities struct {
 
 var AVT_GetDeviceCapabilities = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetDeviceCapabilities{},
-	ArgOut:  AVTArgOut_GetDeviceCapabilities{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetDeviceCapabilities{},
+	ArgOut:  &AVTArgOut_GetDeviceCapabilities{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"PlayMedia", DirOut, &AVT_PossiblePlaybackStorageMedia},
@@ -215,7 +213,7 @@ var AVT_GetDeviceCapabilities = Action{
 }
 
 type AVTArgIn_GetMediaInfo struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetMediaInfo"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetMediaInfo"`
 	InstanceID uint32
 }
 type AVTArgOut_GetMediaInfo struct {
@@ -234,8 +232,8 @@ type AVTArgOut_GetMediaInfo struct {
 
 var AVT_GetMediaInfo = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetMediaInfo{},
-	ArgOut:  AVTArgOut_GetMediaInfo{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetMediaInfo{},
+	ArgOut:  &AVTArgOut_GetMediaInfo{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"NrTracks", DirOut, &AVT_NumberOfTracks},
@@ -251,7 +249,7 @@ var AVT_GetMediaInfo = Action{
 }
 
 type AVTArgIn_GetPositionInfo struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetPositionInfo"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetPositionInfo"`
 	InstanceID uint32
 }
 type AVTArgOut_GetPositionInfo struct {
@@ -269,8 +267,8 @@ type AVTArgOut_GetPositionInfo struct {
 
 var AVT_GetPositionInfo = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetPositionInfo{},
-	ArgOut:  AVTArgOut_GetPositionInfo{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetPositionInfo{},
+	ArgOut:  &AVTArgOut_GetPositionInfo{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"Track", DirOut, &AVT_CurrentTrack},
@@ -285,7 +283,7 @@ var AVT_GetPositionInfo = Action{
 }
 
 type AVTArgIn_GetTransportInfo struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetTransportInfo"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetTransportInfo"`
 	InstanceID uint32
 }
 type AVTArgOut_GetTransportInfo struct {
@@ -298,8 +296,8 @@ type AVTArgOut_GetTransportInfo struct {
 
 var AVT_GetTransportInfo = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetTransportInfo{},
-	ArgOut:  AVTArgOut_GetTransportInfo{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetTransportInfo{},
+	ArgOut:  &AVTArgOut_GetTransportInfo{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"CurrentTransportState", DirOut, &AVT_TransportState},
@@ -309,7 +307,7 @@ var AVT_GetTransportInfo = Action{
 }
 
 type AVTArgIn_GetTransportSettings struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetTransportSettings"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 GetTransportSettings"`
 	InstanceID uint32
 }
 type AVTArgOut_GetTransportSettings struct {
@@ -321,8 +319,8 @@ type AVTArgOut_GetTransportSettings struct {
 
 var AVT_GetTransportSettings = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_GetTransportSettings{},
-	ArgOut:  AVTArgOut_GetTransportSettings{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_GetTransportSettings{},
+	ArgOut:  &AVTArgOut_GetTransportSettings{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"PlayMode", DirOut, &AVT_CurrentPlayMode},
@@ -331,7 +329,7 @@ var AVT_GetTransportSettings = Action{
 }
 
 type AVTArgIn_Next struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Next"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Next"`
 	InstanceID uint32
 }
 type AVTArgOut_Next struct {
@@ -341,15 +339,15 @@ type AVTArgOut_Next struct {
 
 var AVT_Next = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Next{},
-	ArgOut:  AVTArgOut_Next{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Next{},
+	ArgOut:  &AVTArgOut_Next{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 	},
 }
 
 type AVTArgIn_Pause struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Pause"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Pause"`
 	InstanceID uint32
 }
 type AVTArgOut_Pause struct {
@@ -359,15 +357,15 @@ type AVTArgOut_Pause struct {
 
 var AVT_Pause = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Pause{},
-	ArgOut:  AVTArgOut_Pause{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Pause{},
+	ArgOut:  &AVTArgOut_Pause{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 	},
 }
 
 type AVTArgIn_Play struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Play"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Play"`
 	InstanceID uint32
 	Speed      string
 }
@@ -378,8 +376,8 @@ type AVTArgOut_Play struct {
 
 var AVT_Play = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Play{},
-	ArgOut:  AVTArgOut_Play{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Play{},
+	ArgOut:  &AVTArgOut_Play{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"Speed", DirIn, &AVT_TransportPlaySpeed},
@@ -387,7 +385,7 @@ var AVT_Play = Action{
 }
 
 type AVTArgIn_Previous struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Previous"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Previous"`
 	InstanceID uint32
 }
 type AVTArgOut_Previous struct {
@@ -397,15 +395,15 @@ type AVTArgOut_Previous struct {
 
 var AVT_Previous = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Previous{},
-	ArgOut:  AVTArgOut_Previous{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Previous{},
+	ArgOut:  &AVTArgOut_Previous{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 	},
 }
 
 type AVTArgIn_Record struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Record"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Record"`
 	InstanceID uint32
 }
 type AVTArgOut_Record struct {
@@ -415,15 +413,15 @@ type AVTArgOut_Record struct {
 
 var AVT_Record = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Record{},
-	ArgOut:  AVTArgOut_Record{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Record{},
+	ArgOut:  &AVTArgOut_Record{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 	},
 }
 
 type AVTArgIn_Seek struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Seek"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Seek"`
 	InstanceID uint32
 	Unit       string
 	Target     string
@@ -435,8 +433,8 @@ type AVTArgOut_Seek struct {
 
 var AVT_Seek = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Seek{},
-	ArgOut:  AVTArgOut_Seek{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Seek{},
+	ArgOut:  &AVTArgOut_Seek{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"Unit", DirIn, &AVT_A_ARG_TYPE_SeekMode},
@@ -445,7 +443,7 @@ var AVT_Seek = Action{
 }
 
 type AVTArgIn_SetAVTransportURI struct {
-	XMLName            xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetAVTransportURI"`
+	XMLName            xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 SetAVTransportURI"`
 	InstanceID         uint32
 	CurrentURI         string
 	CurrentURIMetaData string
@@ -457,8 +455,8 @@ type AVTArgOut_SetAVTransportURI struct {
 
 var AVT_SetAVTransportURI = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_SetAVTransportURI{},
-	ArgOut:  AVTArgOut_SetAVTransportURI{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_SetAVTransportURI{},
+	ArgOut:  &AVTArgOut_SetAVTransportURI{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"CurrentURI", DirIn, &AVT_AVTransportURI},
@@ -467,7 +465,7 @@ var AVT_SetAVTransportURI = Action{
 }
 
 type AVTArgIn_SetNextAVTransportURI struct {
-	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetNextAVTransportURI"`
+	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 SetNextAVTransportURI"`
 	InstanceID      uint32
 	NextURI         string
 	NextURIMetaData string
@@ -479,8 +477,8 @@ type AVTArgOut_SetNextAVTransportURI struct {
 
 var AVT_SetNextAVTransportURI = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_SetNextAVTransportURI{},
-	ArgOut:  AVTArgOut_SetNextAVTransportURI{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_SetNextAVTransportURI{},
+	ArgOut:  &AVTArgOut_SetNextAVTransportURI{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"NextURI", DirIn, &AVT_NextAVTransportURI},
@@ -489,7 +487,7 @@ var AVT_SetNextAVTransportURI = Action{
 }
 
 type AVTArgIn_SetPlayMode struct {
-	XMLName     xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetPlayMode"`
+	XMLName     xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 SetPlayMode"`
 	InstanceID  uint32
 	NewPlayMode string
 }
@@ -500,8 +498,8 @@ type AVTArgOut_SetPlayMode struct {
 
 var AVT_SetPlayMode = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_SetPlayMode{},
-	ArgOut:  AVTArgOut_SetPlayMode{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_SetPlayMode{},
+	ArgOut:  &AVTArgOut_SetPlayMode{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"NewPlayMode", DirIn, &AVT_CurrentPlayMode},
@@ -509,7 +507,7 @@ var AVT_SetPlayMode = Action{
 }
 
 type AVTArgIn_SetRecordQualityMode struct {
-	XMLName              xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetRecordQualityMode"`
+	XMLName              xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 SetRecordQualityMode"`
 	InstanceID           uint32
 	NewRecordQualityMode string
 }
@@ -520,8 +518,8 @@ type AVTArgOut_SetRecordQualityMode struct {
 
 var AVT_SetRecordQualityMode = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_SetRecordQualityMode{},
-	ArgOut:  AVTArgOut_SetRecordQualityMode{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_SetRecordQualityMode{},
+	ArgOut:  &AVTArgOut_SetRecordQualityMode{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 		{"NewRecordQualityMode", DirIn, &AVT_CurrentRecordQualityMode},
@@ -529,7 +527,7 @@ var AVT_SetRecordQualityMode = Action{
 }
 
 type AVTArgIn_Stop struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v Stop"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:AVTransport:1 Stop"`
 	InstanceID uint32
 }
 type AVTArgOut_Stop struct {
@@ -539,8 +537,8 @@ type AVTArgOut_Stop struct {
 
 var AVT_Stop = Action{
 	Handler: nil,
-	ArgIn:   AVTArgIn_Stop{},
-	ArgOut:  AVTArgOut_Stop{XMLPrefix: soap.ActionNS},
+	ArgIn:   &AVTArgIn_Stop{},
+	ArgOut:  &AVTArgOut_Stop{XMLPrefix: ServiceNS(ServiceName_AVTransport, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &AVT_A_ARG_TYPE_InstanceID},
 	},

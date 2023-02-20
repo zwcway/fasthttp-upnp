@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/zwcway/fasthttp-upnp/scpd"
-	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
 func printVaribale(scpds *scpd.SCPD, prefix string, fp *os.File) (vars map[string]string) {
@@ -97,14 +96,14 @@ func printVaribale(scpds *scpd.SCPD, prefix string, fp *os.File) (vars map[strin
 	return
 }
 
-func printActions(scpds *scpd.SCPD, srvName, prefix string, fp *os.File, vars map[string]string) {
+func printActions(scpds *scpd.SCPD, srvName, prefix string, fp *os.File, vars map[string]string, version int) {
 	sort.SliceStable(scpds.ActionList, func(i, j int) bool {
 		return strings.Compare(scpds.ActionList[i].Name, scpds.ActionList[j].Name) <= 0
 	})
 	actions := ""
 	for _, s := range scpds.ActionList {
 		args := ""
-		argStructIn := fmt.Sprintf("XMLName xml.Name `xml:\"%s %s\"`\n", soap.ActionNS, s.Name)
+		argStructIn := fmt.Sprintf("XMLName xml.Name `xml:\"urn:schemas-upnp-org:service:%s:%d %s\"`\n", srvName, version, s.Name)
 		argStructOut := fmt.Sprintf("XMLName xml.Name `xml:\"u:%sResponse\"`\nXMLPrefix string `xml:\"xmlns:u,attr\"`\n", s.Name)
 		for _, sa := range s.Arguments {
 			// sa.Direction = `"` + sa.Direction + `"`
@@ -122,7 +121,7 @@ func printActions(scpds *scpd.SCPD, srvName, prefix string, fp *os.File, vars ma
 		fp.WriteString(fmt.Sprintf("type %sArgIn_%s struct{\n%s}\n", prefix, s.Name, argStructIn))
 		fp.WriteString(fmt.Sprintf("type %sArgOut_%s struct{\n%s}\n", prefix, s.Name, argStructOut))
 
-		fp.WriteString(fmt.Sprintf("var %[1]s_%[2]s = Action{\nHandler:nil,\nArgIn: %[1]sArgIn_%[2]s{},\nArgOut: %[1]sArgOut_%[2]s{XMLPrefix:soap.ActionNS},\narguments:[]Argument{\n%[3]s\n},\n}\n", prefix, s.Name, args))
+		fp.WriteString(fmt.Sprintf("var %[1]s_%[2]s = Action{\nHandler:nil,\nArgIn: &%[1]sArgIn_%[2]s{},\nArgOut: &%[1]sArgOut_%[2]s{XMLPrefix: ServiceNS(ServiceName_%[4]s, %d)},\narguments:[]Argument{\n%[3]s\n},\n}\n", prefix, s.Name, args, srvName, version))
 
 		actions += fmt.Sprintf("\"%s\": &%s_%s,\n", s.Name, prefix, s.Name)
 	}
@@ -203,13 +202,12 @@ func main() {
 import (
 	"encoding/xml"
 	"github.com/zwcway/fasthttp-upnp/scpd"
-	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
 `)
 
 		vars := printVaribale(&scpd, p, fp)
-		printActions(&scpd, f, p, fp, vars)
+		printActions(&scpd, f, p, fp, vars, int(version))
 
 		fp.Close()
 

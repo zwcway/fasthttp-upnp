@@ -2,9 +2,7 @@ package upnp
 
 import (
 	"encoding/xml"
-
 	"github.com/zwcway/fasthttp-upnp/scpd"
-	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
 var RC_A_ARG_TYPE_Channel = scpd.Variable{
@@ -130,7 +128,7 @@ var RC_VolumeDB = scpd.Variable{
 }
 
 type RCArgIn_GetBlueVideoBlackLevel struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetBlueVideoBlackLevel"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetBlueVideoBlackLevel"`
 	InstanceID uint32
 }
 type RCArgOut_GetBlueVideoBlackLevel struct {
@@ -141,8 +139,8 @@ type RCArgOut_GetBlueVideoBlackLevel struct {
 
 var RC_GetBlueVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetBlueVideoBlackLevel{},
-	ArgOut:  RCArgOut_GetBlueVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetBlueVideoBlackLevel{},
+	ArgOut:  &RCArgOut_GetBlueVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentBlueVideoBlackLevel", DirOut, &RC_BlueVideoBlackLevel},
@@ -150,7 +148,7 @@ var RC_GetBlueVideoBlackLevel = Action{
 }
 
 type RCArgIn_GetBlueVideoGain struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetBlueVideoGain"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetBlueVideoGain"`
 	InstanceID uint32
 }
 type RCArgOut_GetBlueVideoGain struct {
@@ -161,8 +159,8 @@ type RCArgOut_GetBlueVideoGain struct {
 
 var RC_GetBlueVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetBlueVideoGain{},
-	ArgOut:  RCArgOut_GetBlueVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetBlueVideoGain{},
+	ArgOut:  &RCArgOut_GetBlueVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentBlueVideoGain", DirOut, &RC_BlueVideoGain},
@@ -170,7 +168,7 @@ var RC_GetBlueVideoGain = Action{
 }
 
 type RCArgIn_GetBrightness struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetBrightness"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetBrightness"`
 	InstanceID uint32
 }
 type RCArgOut_GetBrightness struct {
@@ -181,8 +179,8 @@ type RCArgOut_GetBrightness struct {
 
 var RC_GetBrightness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetBrightness{},
-	ArgOut:  RCArgOut_GetBrightness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetBrightness{},
+	ArgOut:  &RCArgOut_GetBrightness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentBrightness", DirOut, &RC_Brightness},
@@ -190,7 +188,7 @@ var RC_GetBrightness = Action{
 }
 
 type RCArgIn_GetColorTemperature struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetColorTemperature"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetColorTemperature"`
 	InstanceID uint32
 }
 type RCArgOut_GetColorTemperature struct {
@@ -201,8 +199,8 @@ type RCArgOut_GetColorTemperature struct {
 
 var RC_GetColorTemperature = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetColorTemperature{},
-	ArgOut:  RCArgOut_GetColorTemperature{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetColorTemperature{},
+	ArgOut:  &RCArgOut_GetColorTemperature{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentColorTemperature", DirOut, &RC_ColorTemperature},
@@ -210,7 +208,7 @@ var RC_GetColorTemperature = Action{
 }
 
 type RCArgIn_GetContrast struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetContrast"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetContrast"`
 	InstanceID uint32
 }
 type RCArgOut_GetContrast struct {
@@ -221,8 +219,8 @@ type RCArgOut_GetContrast struct {
 
 var RC_GetContrast = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetContrast{},
-	ArgOut:  RCArgOut_GetContrast{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetContrast{},
+	ArgOut:  &RCArgOut_GetContrast{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentContrast", DirOut, &RC_Contrast},
@@ -230,7 +228,7 @@ var RC_GetContrast = Action{
 }
 
 type RCArgIn_GetGreenVideoBlackLevel struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetGreenVideoBlackLevel"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetGreenVideoBlackLevel"`
 	InstanceID uint32
 }
 type RCArgOut_GetGreenVideoBlackLevel struct {
@@ -241,8 +239,8 @@ type RCArgOut_GetGreenVideoBlackLevel struct {
 
 var RC_GetGreenVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetGreenVideoBlackLevel{},
-	ArgOut:  RCArgOut_GetGreenVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetGreenVideoBlackLevel{},
+	ArgOut:  &RCArgOut_GetGreenVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentGreenVideoBlackLevel", DirOut, &RC_GreenVideoBlackLevel},
@@ -250,7 +248,7 @@ var RC_GetGreenVideoBlackLevel = Action{
 }
 
 type RCArgIn_GetGreenVideoGain struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetGreenVideoGain"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetGreenVideoGain"`
 	InstanceID uint32
 }
 type RCArgOut_GetGreenVideoGain struct {
@@ -261,8 +259,8 @@ type RCArgOut_GetGreenVideoGain struct {
 
 var RC_GetGreenVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetGreenVideoGain{},
-	ArgOut:  RCArgOut_GetGreenVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetGreenVideoGain{},
+	ArgOut:  &RCArgOut_GetGreenVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentGreenVideoGain", DirOut, &RC_GreenVideoGain},
@@ -270,7 +268,7 @@ var RC_GetGreenVideoGain = Action{
 }
 
 type RCArgIn_GetHorizontalKeystone struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetHorizontalKeystone"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetHorizontalKeystone"`
 	InstanceID uint32
 }
 type RCArgOut_GetHorizontalKeystone struct {
@@ -281,8 +279,8 @@ type RCArgOut_GetHorizontalKeystone struct {
 
 var RC_GetHorizontalKeystone = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetHorizontalKeystone{},
-	ArgOut:  RCArgOut_GetHorizontalKeystone{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetHorizontalKeystone{},
+	ArgOut:  &RCArgOut_GetHorizontalKeystone{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentHorizontalKeystone", DirOut, &RC_HorizontalKeystone},
@@ -290,7 +288,7 @@ var RC_GetHorizontalKeystone = Action{
 }
 
 type RCArgIn_GetLoudness struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetLoudness"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetLoudness"`
 	InstanceID uint32
 	Channel    string
 }
@@ -302,8 +300,8 @@ type RCArgOut_GetLoudness struct {
 
 var RC_GetLoudness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetLoudness{},
-	ArgOut:  RCArgOut_GetLoudness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetLoudness{},
+	ArgOut:  &RCArgOut_GetLoudness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -312,7 +310,7 @@ var RC_GetLoudness = Action{
 }
 
 type RCArgIn_GetMute struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetMute"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetMute"`
 	InstanceID uint32
 	Channel    string
 }
@@ -324,8 +322,8 @@ type RCArgOut_GetMute struct {
 
 var RC_GetMute = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetMute{},
-	ArgOut:  RCArgOut_GetMute{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetMute{},
+	ArgOut:  &RCArgOut_GetMute{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -334,7 +332,7 @@ var RC_GetMute = Action{
 }
 
 type RCArgIn_GetRedVideoBlackLevel struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetRedVideoBlackLevel"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetRedVideoBlackLevel"`
 	InstanceID uint32
 }
 type RCArgOut_GetRedVideoBlackLevel struct {
@@ -345,8 +343,8 @@ type RCArgOut_GetRedVideoBlackLevel struct {
 
 var RC_GetRedVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetRedVideoBlackLevel{},
-	ArgOut:  RCArgOut_GetRedVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetRedVideoBlackLevel{},
+	ArgOut:  &RCArgOut_GetRedVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentRedVideoBlackLevel", DirOut, &RC_RedVideoBlackLevel},
@@ -354,7 +352,7 @@ var RC_GetRedVideoBlackLevel = Action{
 }
 
 type RCArgIn_GetRedVideoGain struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetRedVideoGain"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetRedVideoGain"`
 	InstanceID uint32
 }
 type RCArgOut_GetRedVideoGain struct {
@@ -365,8 +363,8 @@ type RCArgOut_GetRedVideoGain struct {
 
 var RC_GetRedVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetRedVideoGain{},
-	ArgOut:  RCArgOut_GetRedVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetRedVideoGain{},
+	ArgOut:  &RCArgOut_GetRedVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentRedVideoGain", DirOut, &RC_RedVideoGain},
@@ -374,7 +372,7 @@ var RC_GetRedVideoGain = Action{
 }
 
 type RCArgIn_GetSharpness struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetSharpness"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetSharpness"`
 	InstanceID uint32
 }
 type RCArgOut_GetSharpness struct {
@@ -385,8 +383,8 @@ type RCArgOut_GetSharpness struct {
 
 var RC_GetSharpness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetSharpness{},
-	ArgOut:  RCArgOut_GetSharpness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetSharpness{},
+	ArgOut:  &RCArgOut_GetSharpness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentSharpness", DirOut, &RC_Sharpness},
@@ -394,7 +392,7 @@ var RC_GetSharpness = Action{
 }
 
 type RCArgIn_GetVerticalKeystone struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetVerticalKeystone"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetVerticalKeystone"`
 	InstanceID uint32
 }
 type RCArgOut_GetVerticalKeystone struct {
@@ -405,8 +403,8 @@ type RCArgOut_GetVerticalKeystone struct {
 
 var RC_GetVerticalKeystone = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetVerticalKeystone{},
-	ArgOut:  RCArgOut_GetVerticalKeystone{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetVerticalKeystone{},
+	ArgOut:  &RCArgOut_GetVerticalKeystone{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentVerticalKeystone", DirOut, &RC_VerticalKeystone},
@@ -414,7 +412,7 @@ var RC_GetVerticalKeystone = Action{
 }
 
 type RCArgIn_GetVolume struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetVolume"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetVolume"`
 	InstanceID uint32
 	Channel    string
 }
@@ -426,8 +424,8 @@ type RCArgOut_GetVolume struct {
 
 var RC_GetVolume = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetVolume{},
-	ArgOut:  RCArgOut_GetVolume{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetVolume{},
+	ArgOut:  &RCArgOut_GetVolume{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -436,7 +434,7 @@ var RC_GetVolume = Action{
 }
 
 type RCArgIn_GetVolumeDB struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetVolumeDB"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetVolumeDB"`
 	InstanceID uint32
 	Channel    string
 }
@@ -448,8 +446,8 @@ type RCArgOut_GetVolumeDB struct {
 
 var RC_GetVolumeDB = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetVolumeDB{},
-	ArgOut:  RCArgOut_GetVolumeDB{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetVolumeDB{},
+	ArgOut:  &RCArgOut_GetVolumeDB{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -458,7 +456,7 @@ var RC_GetVolumeDB = Action{
 }
 
 type RCArgIn_GetVolumeDBRange struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v GetVolumeDBRange"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 GetVolumeDBRange"`
 	InstanceID uint32
 	Channel    string
 }
@@ -471,8 +469,8 @@ type RCArgOut_GetVolumeDBRange struct {
 
 var RC_GetVolumeDBRange = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_GetVolumeDBRange{},
-	ArgOut:  RCArgOut_GetVolumeDBRange{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_GetVolumeDBRange{},
+	ArgOut:  &RCArgOut_GetVolumeDBRange{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -482,7 +480,7 @@ var RC_GetVolumeDBRange = Action{
 }
 
 type RCArgIn_ListPresets struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v ListPresets"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 ListPresets"`
 	InstanceID uint32
 }
 type RCArgOut_ListPresets struct {
@@ -493,8 +491,8 @@ type RCArgOut_ListPresets struct {
 
 var RC_ListPresets = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_ListPresets{},
-	ArgOut:  RCArgOut_ListPresets{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_ListPresets{},
+	ArgOut:  &RCArgOut_ListPresets{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"CurrentPresetNameList", DirOut, &RC_PresetNameList},
@@ -502,7 +500,7 @@ var RC_ListPresets = Action{
 }
 
 type RCArgIn_SelectPreset struct {
-	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SelectPreset"`
+	XMLName    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SelectPreset"`
 	InstanceID uint32
 	PresetName string
 }
@@ -513,8 +511,8 @@ type RCArgOut_SelectPreset struct {
 
 var RC_SelectPreset = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SelectPreset{},
-	ArgOut:  RCArgOut_SelectPreset{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SelectPreset{},
+	ArgOut:  &RCArgOut_SelectPreset{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"PresetName", DirIn, &RC_A_ARG_TYPE_PresetName},
@@ -522,7 +520,7 @@ var RC_SelectPreset = Action{
 }
 
 type RCArgIn_SetBlueVideoBlackLevel struct {
-	XMLName                    xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetBlueVideoBlackLevel"`
+	XMLName                    xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetBlueVideoBlackLevel"`
 	InstanceID                 uint32
 	DesiredBlueVideoBlackLevel uint16
 }
@@ -533,8 +531,8 @@ type RCArgOut_SetBlueVideoBlackLevel struct {
 
 var RC_SetBlueVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetBlueVideoBlackLevel{},
-	ArgOut:  RCArgOut_SetBlueVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetBlueVideoBlackLevel{},
+	ArgOut:  &RCArgOut_SetBlueVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredBlueVideoBlackLevel", DirIn, &RC_BlueVideoBlackLevel},
@@ -542,7 +540,7 @@ var RC_SetBlueVideoBlackLevel = Action{
 }
 
 type RCArgIn_SetBlueVideoGain struct {
-	XMLName              xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetBlueVideoGain"`
+	XMLName              xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetBlueVideoGain"`
 	InstanceID           uint32
 	DesiredBlueVideoGain uint16
 }
@@ -553,8 +551,8 @@ type RCArgOut_SetBlueVideoGain struct {
 
 var RC_SetBlueVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetBlueVideoGain{},
-	ArgOut:  RCArgOut_SetBlueVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetBlueVideoGain{},
+	ArgOut:  &RCArgOut_SetBlueVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredBlueVideoGain", DirIn, &RC_BlueVideoGain},
@@ -562,7 +560,7 @@ var RC_SetBlueVideoGain = Action{
 }
 
 type RCArgIn_SetBrightness struct {
-	XMLName           xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetBrightness"`
+	XMLName           xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetBrightness"`
 	InstanceID        uint32
 	DesiredBrightness uint16
 }
@@ -573,8 +571,8 @@ type RCArgOut_SetBrightness struct {
 
 var RC_SetBrightness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetBrightness{},
-	ArgOut:  RCArgOut_SetBrightness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetBrightness{},
+	ArgOut:  &RCArgOut_SetBrightness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredBrightness", DirIn, &RC_Brightness},
@@ -582,7 +580,7 @@ var RC_SetBrightness = Action{
 }
 
 type RCArgIn_SetColorTemperature struct {
-	XMLName                 xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetColorTemperature"`
+	XMLName                 xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetColorTemperature"`
 	InstanceID              uint32
 	DesiredColorTemperature uint16
 }
@@ -593,8 +591,8 @@ type RCArgOut_SetColorTemperature struct {
 
 var RC_SetColorTemperature = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetColorTemperature{},
-	ArgOut:  RCArgOut_SetColorTemperature{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetColorTemperature{},
+	ArgOut:  &RCArgOut_SetColorTemperature{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredColorTemperature", DirIn, &RC_ColorTemperature},
@@ -602,7 +600,7 @@ var RC_SetColorTemperature = Action{
 }
 
 type RCArgIn_SetContrast struct {
-	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetContrast"`
+	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetContrast"`
 	InstanceID      uint32
 	DesiredContrast uint16
 }
@@ -613,8 +611,8 @@ type RCArgOut_SetContrast struct {
 
 var RC_SetContrast = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetContrast{},
-	ArgOut:  RCArgOut_SetContrast{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetContrast{},
+	ArgOut:  &RCArgOut_SetContrast{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredContrast", DirIn, &RC_Contrast},
@@ -622,7 +620,7 @@ var RC_SetContrast = Action{
 }
 
 type RCArgIn_SetGreenVideoBlackLevel struct {
-	XMLName                     xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetGreenVideoBlackLevel"`
+	XMLName                     xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetGreenVideoBlackLevel"`
 	InstanceID                  uint32
 	DesiredGreenVideoBlackLevel uint16
 }
@@ -633,8 +631,8 @@ type RCArgOut_SetGreenVideoBlackLevel struct {
 
 var RC_SetGreenVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetGreenVideoBlackLevel{},
-	ArgOut:  RCArgOut_SetGreenVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetGreenVideoBlackLevel{},
+	ArgOut:  &RCArgOut_SetGreenVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredGreenVideoBlackLevel", DirIn, &RC_GreenVideoBlackLevel},
@@ -642,7 +640,7 @@ var RC_SetGreenVideoBlackLevel = Action{
 }
 
 type RCArgIn_SetGreenVideoGain struct {
-	XMLName               xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetGreenVideoGain"`
+	XMLName               xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetGreenVideoGain"`
 	InstanceID            uint32
 	DesiredGreenVideoGain uint16
 }
@@ -653,8 +651,8 @@ type RCArgOut_SetGreenVideoGain struct {
 
 var RC_SetGreenVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetGreenVideoGain{},
-	ArgOut:  RCArgOut_SetGreenVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetGreenVideoGain{},
+	ArgOut:  &RCArgOut_SetGreenVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredGreenVideoGain", DirIn, &RC_GreenVideoGain},
@@ -662,7 +660,7 @@ var RC_SetGreenVideoGain = Action{
 }
 
 type RCArgIn_SetHorizontalKeystone struct {
-	XMLName                   xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetHorizontalKeystone"`
+	XMLName                   xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetHorizontalKeystone"`
 	InstanceID                uint32
 	DesiredHorizontalKeystone int16
 }
@@ -673,8 +671,8 @@ type RCArgOut_SetHorizontalKeystone struct {
 
 var RC_SetHorizontalKeystone = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetHorizontalKeystone{},
-	ArgOut:  RCArgOut_SetHorizontalKeystone{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetHorizontalKeystone{},
+	ArgOut:  &RCArgOut_SetHorizontalKeystone{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredHorizontalKeystone", DirIn, &RC_HorizontalKeystone},
@@ -682,7 +680,7 @@ var RC_SetHorizontalKeystone = Action{
 }
 
 type RCArgIn_SetLoudness struct {
-	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetLoudness"`
+	XMLName         xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetLoudness"`
 	InstanceID      uint32
 	Channel         string
 	DesiredLoudness bool
@@ -694,8 +692,8 @@ type RCArgOut_SetLoudness struct {
 
 var RC_SetLoudness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetLoudness{},
-	ArgOut:  RCArgOut_SetLoudness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetLoudness{},
+	ArgOut:  &RCArgOut_SetLoudness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -704,7 +702,7 @@ var RC_SetLoudness = Action{
 }
 
 type RCArgIn_SetMute struct {
-	XMLName     xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetMute"`
+	XMLName     xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetMute"`
 	InstanceID  uint32
 	Channel     string
 	DesiredMute bool
@@ -716,8 +714,8 @@ type RCArgOut_SetMute struct {
 
 var RC_SetMute = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetMute{},
-	ArgOut:  RCArgOut_SetMute{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetMute{},
+	ArgOut:  &RCArgOut_SetMute{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -726,7 +724,7 @@ var RC_SetMute = Action{
 }
 
 type RCArgIn_SetRedVideoBlackLevel struct {
-	XMLName                   xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetRedVideoBlackLevel"`
+	XMLName                   xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetRedVideoBlackLevel"`
 	InstanceID                uint32
 	DesiredRedVideoBlackLevel uint16
 }
@@ -737,8 +735,8 @@ type RCArgOut_SetRedVideoBlackLevel struct {
 
 var RC_SetRedVideoBlackLevel = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetRedVideoBlackLevel{},
-	ArgOut:  RCArgOut_SetRedVideoBlackLevel{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetRedVideoBlackLevel{},
+	ArgOut:  &RCArgOut_SetRedVideoBlackLevel{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredRedVideoBlackLevel", DirIn, &RC_RedVideoBlackLevel},
@@ -746,7 +744,7 @@ var RC_SetRedVideoBlackLevel = Action{
 }
 
 type RCArgIn_SetRedVideoGain struct {
-	XMLName             xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetRedVideoGain"`
+	XMLName             xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetRedVideoGain"`
 	InstanceID          uint32
 	DesiredRedVideoGain uint16
 }
@@ -757,8 +755,8 @@ type RCArgOut_SetRedVideoGain struct {
 
 var RC_SetRedVideoGain = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetRedVideoGain{},
-	ArgOut:  RCArgOut_SetRedVideoGain{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetRedVideoGain{},
+	ArgOut:  &RCArgOut_SetRedVideoGain{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredRedVideoGain", DirIn, &RC_RedVideoGain},
@@ -766,7 +764,7 @@ var RC_SetRedVideoGain = Action{
 }
 
 type RCArgIn_SetSharpness struct {
-	XMLName          xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetSharpness"`
+	XMLName          xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetSharpness"`
 	InstanceID       uint32
 	DesiredSharpness uint16
 }
@@ -777,8 +775,8 @@ type RCArgOut_SetSharpness struct {
 
 var RC_SetSharpness = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetSharpness{},
-	ArgOut:  RCArgOut_SetSharpness{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetSharpness{},
+	ArgOut:  &RCArgOut_SetSharpness{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredSharpness", DirIn, &RC_Sharpness},
@@ -786,7 +784,7 @@ var RC_SetSharpness = Action{
 }
 
 type RCArgIn_SetVerticalKeystone struct {
-	XMLName                 xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetVerticalKeystone"`
+	XMLName                 xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetVerticalKeystone"`
 	InstanceID              uint32
 	DesiredVerticalKeystone int16
 }
@@ -797,8 +795,8 @@ type RCArgOut_SetVerticalKeystone struct {
 
 var RC_SetVerticalKeystone = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetVerticalKeystone{},
-	ArgOut:  RCArgOut_SetVerticalKeystone{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetVerticalKeystone{},
+	ArgOut:  &RCArgOut_SetVerticalKeystone{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"DesiredVerticalKeystone", DirIn, &RC_VerticalKeystone},
@@ -806,7 +804,7 @@ var RC_SetVerticalKeystone = Action{
 }
 
 type RCArgIn_SetVolume struct {
-	XMLName       xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetVolume"`
+	XMLName       xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetVolume"`
 	InstanceID    uint32
 	Channel       string
 	DesiredVolume uint16
@@ -818,8 +816,8 @@ type RCArgOut_SetVolume struct {
 
 var RC_SetVolume = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetVolume{},
-	ArgOut:  RCArgOut_SetVolume{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetVolume{},
+	ArgOut:  &RCArgOut_SetVolume{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
@@ -828,7 +826,7 @@ var RC_SetVolume = Action{
 }
 
 type RCArgIn_SetVolumeDB struct {
-	XMLName       xml.Name `xml:"urn:schemas-upnp-org:service:serviceType:v SetVolumeDB"`
+	XMLName       xml.Name `xml:"urn:schemas-upnp-org:service:RenderingControl:1 SetVolumeDB"`
 	InstanceID    uint32
 	Channel       string
 	DesiredVolume int16
@@ -840,8 +838,8 @@ type RCArgOut_SetVolumeDB struct {
 
 var RC_SetVolumeDB = Action{
 	Handler: nil,
-	ArgIn:   RCArgIn_SetVolumeDB{},
-	ArgOut:  RCArgOut_SetVolumeDB{XMLPrefix: soap.ActionNS},
+	ArgIn:   &RCArgIn_SetVolumeDB{},
+	ArgOut:  &RCArgOut_SetVolumeDB{XMLPrefix: ServiceNS(ServiceName_RenderingControl, 1)},
 	arguments: []Argument{
 		{"InstanceID", DirIn, &RC_A_ARG_TYPE_InstanceID},
 		{"Channel", DirIn, &RC_A_ARG_TYPE_Channel},
