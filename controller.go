@@ -148,13 +148,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 		return fmt.Errorf("unknown action '%s'", soapAction.Action)
 	}
 
-	err = unmarshalActionRequest(&action.ArgIn, ctx.Request.Body())
-	if err != nil {
-		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		return err
-	}
-
-	err = parseRequestArguments(action, ctx)
+	err = unmarshalActionRequest(action.ArgIn, ctx.Request.Body())
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return err
@@ -165,7 +159,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 		return fmt.Errorf("the action '%s' handler is nil", action.name)
 	}
 
-	action.Handler(ctx)
+	action.Handler(action.ArgIn, action.ArgOut, ctx)
 
 	var resp []byte
 	resp, err = marshalActionResponse(&action.ArgOut)
@@ -296,13 +290,13 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 	return nil
 }
 
-func unmarshalActionRequest(args *any, body []byte) error {
+func unmarshalActionRequest(args any, body []byte) error {
 	var env soap.Envelope
 	err := xml.Unmarshal(body, &env)
 	if err != nil {
 		return err
 	}
-	err = xml.Unmarshal(env.Body.Action, *args)
+	err = xml.Unmarshal(env.Body.Action, args)
 	if err != nil {
 		return err
 	}
