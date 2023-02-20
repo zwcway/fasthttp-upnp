@@ -34,20 +34,21 @@ func (e *SSDPError) Error() string {
 }
 
 type RequestError struct {
-	src *net.UDPAddr
-	err error
+	Src *net.UDPAddr
+	Err error
 }
 
 func (e *RequestError) Error() string {
-	return fmt.Sprintf("request error from %s '%s'", e.src.String(), e.err.Error())
+	return fmt.Sprintf("request error from %s '%s'", e.Src.String(), e.Err.Error())
 }
 
 type InterfaceError struct {
-	iface *net.Interface
+	Iface *net.Interface
+	Err   error
 }
 
-func (e *InterfaceError) Error() string {
-	return fmt.Sprintf("the interface '%s' no address", e.iface.Name)
+func (e *InterfaceError) Error() (s string) {
+	return fmt.Sprintf("the interface '%s' error : %s\n", e.Iface.Name, e.Err)
 }
 
 func IsIPDenyError(err error) bool {

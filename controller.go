@@ -13,7 +13,7 @@ import (
 	"github.com/zwcway/fasthttp-upnp/soap"
 )
 
-type httpHandler func(c *Controller, ctx *fasthttp.RequestCtx) error
+type httpHandler func(c *Controller, ctx *fasthttp.RequestCtx, uuid string) error
 
 type Controller struct {
 	SpecVersion scpd.SpecVersion
@@ -110,9 +110,9 @@ func (c *Controller) ServiceId(auth string) string {
 	return fmt.Sprintf("urn:%s:service:%s", auth, c.ServiceName)
 }
 
-func (c *Controller) SCPDHttpPath() string    { return c.scpdHttpPath }
-func (c *Controller) ControlHttpPath() string { return c.controlHttpPath }
-func (c *Controller) EventHttpPath() string   { return c.eventHttpPath }
+func (c *Controller) SCPDHttpPath(uuid string) string    { return "/" + uuid + c.scpdHttpPath }
+func (c *Controller) ControlHttpPath(uuid string) string { return "/" + uuid + c.controlHttpPath }
+func (c *Controller) EventHttpPath(uuid string) string   { return "/" + uuid + c.eventHttpPath }
 
 type ServiceController interface {
 	Init(ctx context.Context) error
@@ -123,13 +123,13 @@ func ParseSOAPAction(ctx *fasthttp.RequestCtx) (*soap.SoapAction, error) {
 	return soap.ParseSOAPAction(string(ctx.Request.Header.Peek("SOAPACTION")))
 }
 
-func defaultSCPDHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
+func defaultSCPDHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string) error {
 	ctx.Response.Header.SetContentType(ResponseContentTypeXML)
 	ctx.Write(c.scpdXML)
 	return nil
 }
 
-func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
+func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string) error {
 	soapAction, err := ParseSOAPAction(ctx)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
@@ -159,7 +159,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 		return fmt.Errorf("the action '%s' handler is nil", action.name)
 	}
 
-	action.Handler(action.ArgIn, action.ArgOut, ctx)
+	action.Handler(action.ArgIn, action.ArgOut, ctx, uuid)
 
 	var resp []byte
 	resp, err = marshalActionResponse(action, c)
@@ -176,7 +176,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
 	return nil
 }
 
-func defaultEventHandler(c *Controller, ctx *fasthttp.RequestCtx) error {
+func defaultEventHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string) error {
 	method := string(ctx.Method())
 
 	switch method {

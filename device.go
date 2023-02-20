@@ -15,9 +15,19 @@ import (
 	"github.com/zwcway/fasthttp-upnp/ssdp"
 )
 
+const (
+	replaced_FriendlyName = "**FRIENDLYNAME**"
+	replaced_UUID         = "**UUID**"
+)
+
+type multiServer struct {
+	name string
+	uuid string
+	root string
+}
 type DeviceServer struct {
 	AuthName     string
-	FriendlyName string
+	MultiDevices []*multiServer
 
 	DeviceType string
 
@@ -25,7 +35,7 @@ type DeviceServer struct {
 	Manufacturer       string
 	ServerName         string
 	RootDescNamespaces map[string]string
-	RootDescUrl        string
+	UrlPrefix          string
 
 	ServiceList []*Controller
 
@@ -40,7 +50,6 @@ type DeviceServer struct {
 
 	ErrorChan chan error
 
-	uuid         string
 	ssdpList     []ssdp.SSDPServer
 	ctx          context.Context
 	conn         net.Listener
@@ -65,8 +74,23 @@ func (s *DeviceServer) Init() (err error) {
 	if s.ctx == nil {
 		return fmt.Errorf("context can not nil")
 	}
-	if s.FriendlyName == "" {
-		return fmt.Errorf("FriendlyName con not empty")
+	s.UrlPrefix = strings.Trim(s.UrlPrefix, "/")
+	if s.UrlPrefix != "" {
+		s.UrlPrefix = "/" + s.UrlPrefix
+	}
+
+	for _, md := range s.MultiDevices {
+		if md.name == "" {
+			return fmt.Errorf("FriendlyName con not empty")
+		}
+		if md.uuid == "" {
+			md.uuid = MakeUUID(md.name)
+		}
+		if md.root == "" {
+			md.root = fmt.Sprintf("%s/%s/rootDesc.xml", s.UrlPrefix, md.uuid)
+		} else {
+			md.root = fmt.Sprintf("%s/%s", s.UrlPrefix, strings.Trim(md.root, "/"))
+		}
 	}
 	if s.AuthName == "" {
 		s.AuthName = AuthName
@@ -75,11 +99,6 @@ func (s *DeviceServer) Init() (err error) {
 		s.SpecVersion.Major = 1
 	}
 
-	if s.RootDescUrl == "" {
-		s.RootDescUrl = "/rootDesc.xml"
-	} else {
-		s.RootDescUrl = "/" + strings.Trim(s.RootDescUrl, "/")
-	}
 	if s.ListenInterface != nil && s.ListenPort == 0 {
 		return fmt.Errorf("must specify a listen port")
 	}
@@ -109,7 +128,9 @@ func (s *DeviceServer) Init() (err error) {
 
 		for i := range ifs {
 			ifi := ifs[i]
-			s.ifaces = append(s.ifaces, &ifi)
+			if ifi.Flags&net.FlagLoopback == 0 && ifi.Flags&net.FlagMulticast != 0 {
+				s.ifaces = append(s.ifaces, &ifi)
+			}
 		}
 	}
 
@@ -128,9 +149,9 @@ func (s *DeviceServer) makeServices() (srvs []scpd.Service) {
 		srv := scpd.Service{
 			ServiceType: c.ServiceURN(s.AuthName),
 			ServiceId:   c.ServiceId(s.AuthName),
-			SCPDURL:     c.SCPDHttpPath(),
-			ControlURL:  c.ControlHttpPath(),
-			EventSubURL: c.EventHttpPath(),
+			SCPDURL:     c.SCPDHttpPath(replaced_UUID),
+			ControlURL:  c.ControlHttpPath(replaced_UUID),
+			EventSubURL: c.EventHttpPath(replaced_UUID),
 		}
 
 		srvs = append(srvs, srv)
@@ -151,10 +172,10 @@ func (s *DeviceServer) makeDevice() scpd.DeviceDesc {
 		SpecVersion: s.SpecVersion,
 		Device: scpd.Device{
 			DeviceType:   s.DeviceURN(),
-			FriendlyName: s.FriendlyName,
+			FriendlyName: replaced_FriendlyName,
 			Manufacturer: s.Manufacturer,
 			ModelName:    s.ServerName,
-			UDN:          s.uuid,
+			UDN:          replaced_UUID,
 			ServiceList:  s.makeServices(),
 		},
 	}
@@ -164,12 +185,28 @@ func (s *DeviceServer) Connection() net.Listener {
 	return s.conn
 }
 
-func NewDeviceServer(ctx context.Context, name string) (s *DeviceServer, err error) {
+func NewDeviceServer(ctx context.Context, friendlyName string) (s *DeviceServer, err error) {
 	s = &DeviceServer{
-		ctx:  ctx,
-		uuid: MakeUUID(name),
+		ctx:          ctx,
+		MultiDevices: []*multiServer{{friendlyName, MakeUUID(friendlyName), ""}},
+	}
 
-		FriendlyName: name,
+	err = s.Init()
+
+	return
+}
+
+// friendlyNames 格式为 uuid:friendlyName
+func NewDeviceServers(ctx context.Context, friendlyNames map[string]string) (s *DeviceServer, err error) {
+	s = &DeviceServer{
+		ctx: ctx,
+		MultiDevices: func(names map[string]string) []*multiServer {
+			ret := []*multiServer{}
+			for uuid, friendlyName := range names {
+				ret = append(ret, &multiServer{friendlyName, uuid, ""})
+			}
+			return ret
+		}(friendlyNames),
 	}
 
 	err = s.Init()
@@ -191,15 +228,20 @@ func (s *DeviceServer) Close() {
 	s.conn = nil
 }
 
-func (s *DeviceServer) Serve() {
+func (s *DeviceServer) Serve() error {
 	if s.conn == nil {
-		return
+		return nil
 	}
 
-	s.startSSDP()
+	err := s.startSSDP()
+	if err != nil {
+		return err
+	}
 
 	server := fasthttp.Server{Handler: s.httpHandler}
 	server.Serve(s.conn)
+
+	return nil
 }
 
 func (s *DeviceServer) httpHandler(ctx *fasthttp.RequestCtx) {
@@ -245,47 +287,55 @@ func (s *DeviceServer) httpHandler(ctx *fasthttp.RequestCtx) {
 
 	for i := range s.ServiceList {
 		c := s.ServiceList[i]
-		switch uri {
-		case c.SCPDHttpPath():
-			if !ctx.IsGet() {
-				ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
+		for _, md := range s.MultiDevices {
+			switch uri {
+			case c.SCPDHttpPath(md.uuid):
+				if !ctx.IsGet() {
+					ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
+					return
+				}
+				if c.SCPDHandler != nil {
+					err = c.SCPDHandler(c, ctx, md.uuid)
+				} else {
+					ctx.SetStatusCode(fasthttp.StatusNotFound)
+				}
+				return
+			case c.ControlHttpPath(md.uuid):
+				if !ctx.IsPost() {
+					ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
+					return
+				}
+				if !checkRequestIsXML(ctx) {
+					ctx.SetStatusCode(fasthttp.StatusBadRequest)
+					return
+				}
+				if c.ControlHandler != nil {
+					err = c.ControlHandler(c, ctx, md.uuid)
+				} else {
+					ctx.SetStatusCode(fasthttp.StatusNotFound)
+				}
+				return
+			case c.EventHttpPath(md.uuid):
+				if c.EventHandler != nil {
+					err = c.EventHandler(c, ctx, md.uuid)
+				} else {
+					ctx.SetStatusCode(fasthttp.StatusNotFound)
+				}
 				return
 			}
-			if c.SCPDHandler != nil {
-				err = c.SCPDHandler(c, ctx)
-			} else {
-				ctx.SetStatusCode(fasthttp.StatusNotFound)
-			}
-			return
-		case c.ControlHttpPath():
-			if !ctx.IsPost() {
-				ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
-				return
-			}
-			if !checkRequestIsXML(ctx) {
-				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return
-			}
-			if c.ControlHandler != nil {
-				err = c.ControlHandler(c, ctx)
-			} else {
-				ctx.SetStatusCode(fasthttp.StatusNotFound)
-			}
-			return
-		case c.EventHttpPath():
-			if c.EventHandler != nil {
-				err = c.EventHandler(c, ctx)
-			} else {
-				ctx.SetStatusCode(fasthttp.StatusNotFound)
-			}
-			return
 		}
 	}
 
-	if uri == s.RootDescUrl {
-		ctx.Response.Header.SetContentType(`text/xml; charset="utf-8"`)
-		ctx.Write(s.rootDescXML)
-		return
+	for _, md := range s.MultiDevices {
+		if uri == md.root {
+			ctx.Response.Header.SetContentType(`text/xml; charset="utf-8"`)
+
+			xml := bytes.Replace(s.rootDescXML, []byte(replaced_FriendlyName), []byte(md.name), 1)
+			xml = bytes.ReplaceAll(xml, []byte(replaced_UUID), []byte(md.uuid))
+
+			ctx.Write(xml)
+			return
+		}
 	}
 
 	ctx.SetStatusCode(fasthttp.StatusNotFound)
@@ -312,20 +362,32 @@ func checkRequestIsXML(ctx *fasthttp.RequestCtx) bool {
 	return true
 }
 
-func (s *DeviceServer) makeSSDPLocation(ip net.IP) string {
+func (s *DeviceServer) makeSSDPLocation(uuid string, ip net.IP) string {
 	var host net.IP
 	if s.listenedAddr.IP.IsUnspecified() {
 		host = ip
 	} else {
 		host = s.listenedAddr.IP
 	}
+	path := ""
+	for _, md := range s.MultiDevices {
+		if uuid == md.uuid {
+			path = md.root
+			break
+		}
+	}
+
+	if path == "" {
+		path = s.MultiDevices[0].root
+	}
+
 	url := url.URL{
 		Scheme: "http",
 		Host: (&net.TCPAddr{
 			IP:   host,
 			Port: s.listenedAddr.Port,
 		}).String(),
-		Path: s.RootDescUrl,
+		Path: path,
 	}
 	return url.String()
 }
@@ -337,47 +399,36 @@ func (s *DeviceServer) notifyError(err error) {
 	s.ErrorChan <- err
 }
 
-func (s *DeviceServer) ssdpRoutine(ifi *net.Interface, devices []string, services []string) {
-	ss, err := ssdp.NewSSDPServer(s.ctx, ifi, s.uuid)
+func (s *DeviceServer) startSSDP() error {
+	services := []string{}
+	for _, srv := range s.makeServices() {
+		services = append(services, srv.ServiceType)
+	}
+
+	uuids := []string{}
+	for _, md := range s.MultiDevices {
+		uuids = append(uuids, md.uuid)
+	}
+	ss, err := ssdp.NewSSDPServer(s.ctx, s.ifaces, uuids)
 	if err != nil {
 		s.notifyError(err)
-		return
+		return err
 	}
 	s.ssdpList = append(s.ssdpList, ss)
 
 	ss.Location = s.makeSSDPLocation
 	ss.ServerDesc = fmt.Sprintf("UPnP/1.0 %s", s.ServerName)
-	ss.Devices = devices
 	ss.Services = services
 	ss.ErrChan = s.ErrorChan
 	ss.InterfaceAddrsFilter = InterfaceAddrsFilter
 	ss.AllowIps = s.AllowIps
 	ss.DenyIps = s.DenyIps
 
-	err = ss.Init()
-	if err != nil {
-		s.notifyError(err)
-		return
-	}
-
 	err = ss.ListenAndServe()
 	if err != nil {
 		s.notifyError(err)
-		return
-	}
-}
-
-func (s *DeviceServer) startSSDP() {
-	devices := []string{}
-
-	services := []string{}
-	for _, srv := range s.makeServices() {
-		services = append(services, srv.ServiceType)
+		return err
 	}
 
-	for _, iface := range s.ifaces {
-		if iface != nil && iface.Flags&net.FlagLoopback == 0 && iface.Flags&net.FlagMulticast != 0 {
-			go s.ssdpRoutine(iface, devices, services)
-		}
-	}
+	return nil
 }

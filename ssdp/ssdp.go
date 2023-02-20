@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -19,31 +20,34 @@ const (
 	MulticastAddrPort string = "239.255.255.250:1900"
 )
 
+type multiConn struct {
+	ifi  *net.Interface
+	conn *net.UDPConn
+	addr []*net.IPNet
+}
+
 type SSDPServer interface {
-	Init() error
+	Init(ifaces []*net.Interface) error
 	ListenAndServe() error
 	Close()
 }
 type ssdpServer struct {
 	ctx        context.Context
 	signal     chan int
-	conn       *net.UDPConn
 	listenAddr *net.UDPAddr
-	iface      *net.Interface
-	addrs      []*net.IPNet
+	multi      []*multiConn
 
 	ErrChan chan error
 
-	UUID       string
+	uuids      []string
 	ServerDesc string
 
-	Devices  []string
 	Services []string
 
 	AllowIps []*net.IPNet
 	DenyIps  []*net.IPNet
 
-	Location func(ip net.IP) string
+	Location func(uuid string, ip net.IP) string
 
 	NotifyInterval uint
 
@@ -83,12 +87,9 @@ func (s *ssdpServer) interfaceAddrs(iface *net.Interface) []*net.IPNet {
 	return addrStr
 }
 
-func (s *ssdpServer) Init() error {
+func (s *ssdpServer) Init(ifaces []*net.Interface) error {
 	if s.signal == nil {
 		return fmt.Errorf("signal chan nil")
-	}
-	if s.iface == nil {
-		return fmt.Errorf("interface nil")
 	}
 	if s.NotifyInterval == 0 {
 		return fmt.Errorf("NotifyInterval zero")
@@ -97,35 +98,53 @@ func (s *ssdpServer) Init() error {
 		return fmt.Errorf("location function nil")
 	}
 	if s.InterfaceAddrsFilter == nil {
-		return fmt.Errorf("interfaceAddrsFilter function nil")
+		s.InterfaceAddrsFilter = func(iface *net.Interface, ip net.IP) bool { return true }
 	}
-	if s.UUID == "" {
+	if len(s.uuids) == 0 {
 		return fmt.Errorf("uuid can not empty")
 	}
 
-	s.ServerDesc = "Linux/3.14.29 " + s.ServerDesc
+	s.ServerDesc = fmt.Sprintf("%s/%s %s", runtime.GOOS, runtime.Version(), s.ServerDesc)
 
-	s.addrs = s.interfaceAddrs(s.iface)
-	if s.addrs == nil {
-		return &InterfaceError{s.iface}
+	s.multi = make([]*multiConn, 0)
+	if len(ifaces) == 0 {
+		ifis, err := net.Interfaces()
+		if err != nil {
+			return err
+		}
+		for i := range ifis {
+			ifi := ifis[i]
+			ifaces = append(ifaces, &ifi)
+		}
+	}
+
+	for _, ifi := range ifaces {
+		addrs := s.interfaceAddrs(ifi)
+		if len(addrs) == 0 {
+			continue
+		}
+		mc := &multiConn{ifi, nil, addrs}
+		s.multi = append(s.multi, mc)
 	}
 
 	return nil
 }
 
-func NewSSDPServer(ctx context.Context, iface *net.Interface, uuid string) (*ssdpServer, error) {
-	return &ssdpServer{
+func NewSSDPServer(ctx context.Context, ifaces []*net.Interface, uuids []string) (*ssdpServer, error) {
+	s := &ssdpServer{
 		ctx:    ctx,
 		signal: make(chan int, 1),
-		iface:  iface,
 
-		UUID: uuid,
+		uuids: uuids,
 
-		Location: func(ip net.IP) string {
+		Location: func(uuid string, ip net.IP) string {
 			return ip.String()
 		},
 		NotifyInterval: 30,
-	}, nil
+	}
+	err := s.Init(ifaces)
+
+	return s, err
 }
 
 func (s *ssdpServer) Close() {
@@ -137,35 +156,51 @@ func (s *ssdpServer) Close() {
 	close(s.signal)
 	s.signal = nil
 
-	if s.conn != nil {
-		s.sendByeBye()
-		s.conn.Close()
-		s.conn = nil
+	s.sendByeBye()
+	for _, mc := range s.multi {
+		if mc.conn != nil {
+			mc.conn.Close()
+		}
 	}
+	s.multi = nil
 }
 
-func (s *ssdpServer) ListenAndServe() error {
-	if s.signal == nil {
+func (s *ssdpServer) ListenAndServe() (err error) {
+	if s.signal == nil || s.multi == nil {
 		return fmt.Errorf("please init ssdp server first")
 	}
-	var err error
 	s.listenAddr, err = net.ResolveUDPAddr("udp4", MulticastAddrPort)
 	if err != nil {
 		panic(err)
 	}
-	s.conn, err = net.ListenMulticastUDP("udp", s.iface, s.listenAddr)
-	if err != nil {
-		return err
-	}
-	pack := ipv4.NewPacketConn(s.conn)
-	err = pack.SetMulticastTTL(2)
-	if err != nil {
-		return err
+	sucCount := 0
+	for _, mc := range s.multi {
+		mc.conn, err = net.ListenMulticastUDP("udp", mc.ifi, s.listenAddr)
+		if err != nil {
+			mc.conn = nil
+			s.notifyError(&InterfaceError{mc.ifi, err})
+			continue
+		}
+		pack := ipv4.NewPacketConn(mc.conn)
+		err = pack.SetMulticastTTL(2)
+		if err != nil {
+			mc.conn.Close()
+			mc.conn = nil
+			s.notifyError(&InterfaceError{mc.ifi, err})
+			continue
+		}
+
+		go s.readUdpRoutine(mc)
+
+		sucCount++
 	}
 
-	go s.readUdpRoutine()
+	if sucCount > 0 {
+		go s.multicast()
+	} else {
+		return fmt.Errorf("start failed")
+	}
 
-	go s.multicast()
 	return nil
 }
 
@@ -181,24 +216,33 @@ func (s *ssdpServer) multicast() {
 			return
 		case <-tick.C:
 		}
-		for _, addr := range s.addrs {
-			extHeads := map[string]string{
-				"CACHE-CONTROL": fmt.Sprintf("max-age=%d", 5*s.NotifyInterval/2),
-				"LOCATION":      s.Location(addr.IP),
+		extHeads := map[string]string{
+			"CACHE-CONTROL": fmt.Sprintf("max-age=%d", 5*s.NotifyInterval/2),
+			"LOCATION":      "",
+		}
+		for _, uuid := range s.uuids {
+			for _, mc := range s.multi {
+				if mc.conn == nil {
+					continue
+				}
+				for _, addr := range mc.addr {
+					extHeads["LOCATION"] = s.Location(uuid, addr.IP)
+					s.sendAlive(mc, uuid, extHeads)
+				}
 			}
-			s.sendAlive(extHeads)
 		}
 	}
 }
-func (s *ssdpServer) readUdpRoutine() {
-	bs := int(math.Max(65535, float64(s.iface.MTU)))
+
+func (s *ssdpServer) readUdpRoutine(mc *multiConn) {
+	bs := int(math.Max(65535, float64(mc.ifi.MTU)))
 	if bs <= 0 {
 		bs = 65535
 	}
 
 	buf := make([]byte, bs)
 	for {
-		num, src, err := s.conn.ReadFromUDP(buf)
+		num, src, err := mc.conn.ReadFromUDP(buf)
 
 		if err != nil {
 			// 全部退出
@@ -226,7 +270,7 @@ func (s *ssdpServer) readMX(req *http.Request) int64 {
 			return int64(i)
 		}
 	}
-	return 1
+	return 2
 }
 
 func (s *ssdpServer) readSTS(req *http.Request) []string {
@@ -243,13 +287,19 @@ func (s *ssdpServer) readSTS(req *http.Request) []string {
 	return nil
 }
 
-func (s *ssdpServer) ipnetContains(src net.IP) net.IP {
-	for _, in := range s.addrs {
-		if in.Contains(src) {
-			return in.IP
+func (s *ssdpServer) ipnetContains(src net.IP) (*multiConn, net.IP) {
+	for _, mc := range s.multi {
+		if mc.conn == nil {
+			continue
+		}
+
+		for _, in := range mc.addr {
+			if in.Contains(src) {
+				return mc, in.IP
+			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 func (s *ssdpServer) readRequestRoutine(buf []byte, src *net.UDPAddr) {
 
@@ -283,43 +333,42 @@ func (s *ssdpServer) readRequestRoutine(buf []byte, src *net.UDPAddr) {
 	mx := s.readMX(req)
 	sts := s.readSTS(req)
 
-	// s.log.Info("receive", zap.String("from", src.String()), zap.String("body", string(buf)))
-
-	ip := s.ipnetContains(src.IP)
+	mc, ip := s.ipnetContains(src.IP)
 	if ip == nil {
 		return
 	}
 	// 单播响应
-	for _, st := range sts {
-		resp := s.makeResponse(ip, st)
-		s.send(resp, src, time.Duration(rand.Int63n(mx)))
+	for _, uuid := range s.uuids {
+		for _, st := range sts {
+			resp := s.makeResponse(uuid, ip, st)
+			s.send(mc, resp, src, time.Duration(rand.Int63n(mx)))
+		}
 	}
 }
 
-func (s *ssdpServer) makeUSN(nt string) string {
-	if s.UUID == nt {
+func (s *ssdpServer) makeUSN(uuid, nt string) string {
+	if uuid == nt {
 		return nt
 	}
-	return s.UUID + "::" + nt
+	return "uuid:" + uuid + "::" + nt
 }
 
 func (s *ssdpServer) ntList() []string {
-	list := make([]string, 2)
+	list := make([]string, 1)
 	list[0] = "upnp:rootdevice"
-	list[1] = s.UUID
 
-	list = append(list, s.Devices...)
+	list = append(list, s.uuids...)
 	list = append(list, s.Services...)
 
 	return list
 }
 
-func (s *ssdpServer) send(buf []byte, ip *net.UDPAddr, delay time.Duration) {
+func (s *ssdpServer) send(mc *multiConn, buf []byte, ip *net.UDPAddr, delay time.Duration) {
 	go func() {
 		if delay > 0 {
 			select {
 			case <-time.After(delay):
-				if s.conn == nil {
+				if mc.conn == nil {
 					// 拦截多个channel同时触发的情况
 					return
 				}
@@ -330,7 +379,7 @@ func (s *ssdpServer) send(buf []byte, ip *net.UDPAddr, delay time.Duration) {
 				return
 			}
 		}
-		num, err := s.conn.WriteToUDP(buf, ip)
+		num, err := mc.conn.WriteToUDP(buf, ip)
 		if err != nil {
 			s.notifyError(err)
 		}
@@ -351,14 +400,14 @@ func appendHeaders(buf *bytes.Buffer, hd any) {
 	}
 }
 
-func (s *ssdpServer) makeResponse(ip net.IP, st string) []byte {
+func (s *ssdpServer) makeResponse(uuid string, ip net.IP, st string) []byte {
 	head := map[string]string{
 		"CACHE-CONTROL": fmt.Sprintf("max-age=%d", 5*s.NotifyInterval/2),
 		"EXT":           "",
-		"LOCATION":      s.Location(ip),
+		"LOCATION":      s.Location(uuid, ip),
 		"SERVER":        s.ServerDesc,
 		"ST":            st,
-		"USN":           s.makeUSN(st),
+		"USN":           s.makeUSN(uuid, st),
 	}
 	buf := &bytes.Buffer{}
 	appendHeaders(buf, "HTTP/1.1 200 OK\r\n")
@@ -366,13 +415,13 @@ func (s *ssdpServer) makeResponse(ip net.IP, st string) []byte {
 	return buf.Bytes()
 }
 
-func (s *ssdpServer) makeNotify(nt, nts string, extHeads map[string]string) []byte {
+func (s *ssdpServer) makeNotify(uuid, nt, nts string, extHeads map[string]string) []byte {
 	head := map[string]string{
 		"HOST":   MulticastAddrPort,
 		"NT":     nt,
 		"NTS":    nts,
 		"SERVER": s.ServerDesc,
-		"USN":    s.makeUSN(nt),
+		"USN":    s.makeUSN(uuid, nt),
 	}
 
 	buf := &bytes.Buffer{}
@@ -384,16 +433,24 @@ func (s *ssdpServer) makeNotify(nt, nts string, extHeads map[string]string) []by
 }
 
 func (s *ssdpServer) sendByeBye() {
-	for _, nt := range s.ntList() {
-		buf := s.makeNotify(nt, "ssdp:byebye", nil)
-		s.send(buf, s.listenAddr, 0)
+	for _, uuid := range s.uuids {
+		for _, mc := range s.multi {
+			if mc.conn == nil {
+				continue
+			}
+
+			for _, nt := range s.ntList() {
+				buf := s.makeNotify(uuid, nt, "ssdp:byebye", nil)
+				mc.conn.WriteToUDP(buf, s.listenAddr)
+			}
+		}
 	}
 }
 
-func (s *ssdpServer) sendAlive(extHeads map[string]string) {
+func (s *ssdpServer) sendAlive(mc *multiConn, uuid string, extHeads map[string]string) {
 	for _, nt := range s.ntList() {
-		buf := s.makeNotify(nt, "ssdp:alive", extHeads)
-		s.send(buf, s.listenAddr, time.Duration(rand.Int63n(100*int64(time.Millisecond))))
+		buf := s.makeNotify(uuid, nt, "ssdp:alive", extHeads)
+		s.send(mc, buf, s.listenAddr, time.Duration(rand.Int63n(500*int64(time.Millisecond))))
 	}
 }
 

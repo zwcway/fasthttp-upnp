@@ -15,7 +15,7 @@ type Argument struct {
 
 type Action struct {
 	name         string
-	Handler      func(input any, output any, ctx *fasthttp.RequestCtx)
+	Handler      func(input any, output any, ctx *fasthttp.RequestCtx, uuid string)
 	ArgIn        any
 	ArgOut       any
 	arguments    []Argument

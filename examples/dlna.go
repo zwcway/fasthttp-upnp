@@ -33,7 +33,11 @@ func playing(ctx context.Context) {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	upnpSrv, err := upnp.NewDeviceServer(ctx, "我是DLNA")
+	uuids := map[string]string{}
+	for _, n := range []string{"我是DLNA", "备用DLNA"} {
+		uuids[upnp.MakeUUID(n)] = n
+	}
+	upnpSrv, err := upnp.NewDeviceServers(ctx, uuids)
 	if err != nil {
 		return
 	}
@@ -43,14 +47,15 @@ func main() {
 		"xmlns:dlna": "urn:schemas-dlna-org:device-1-0",
 	}
 	upnpSrv.ServiceList = []*upnp.Controller{
-		&upnp.Controller{
+		{
 			ServiceName: upnp.ServiceName_AVTransport,
 			Actions:     upnp.AVTransportV1,
 		},
 	}
 	// upnpSrv.ListenPort = 1900
 	upnpSrv.AllowIps = []*net.IPNet{
-		&net.IPNet{IP: net.ParseIP("10.2.2.24"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
+		{IP: net.ParseIP("10.2.2.24"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
+		{IP: net.ParseIP("10.2.2.113"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
 	}
 	upnpSrv.ErrorChan = make(chan error, 10)
 	upnpSrv.BeforeRequestHandle = func(ctx *fasthttp.RequestCtx) bool {
@@ -58,14 +63,14 @@ func main() {
 		return true
 	}
 
-	upnp.AVT_SetAVTransportURI.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+	upnp.AVT_SetAVTransportURI.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
 		in := input.(*upnp.AVTArgIn_SetAVTransportURI)
 
 		playUrl = in.CurrentURI
 
 		fmt.Println(in.InstanceID, in.CurrentURI)
 	}
-	upnp.AVT_GetPositionInfo.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+	upnp.AVT_GetPositionInfo.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
 		out := output.(*upnp.AVTArgOut_GetPositionInfo)
 
 		playDur++
@@ -74,14 +79,14 @@ func main() {
 
 		out.TrackURI = playUrl
 	}
-	upnp.AVT_Play.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+	upnp.AVT_Play.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
 		playDur = 0
 		ticker.Reset(time.Second)
 	}
-	upnp.AVT_Pause.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+	upnp.AVT_Pause.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
 		ticker.Stop()
 	}
-	upnp.AVT_Stop.Handler = func(input, output any, ctx *fasthttp.RequestCtx) {
+	upnp.AVT_Stop.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
 		playDur = 0
 		ticker.Stop()
 	}
