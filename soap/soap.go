@@ -8,6 +8,9 @@ import (
 )
 
 const (
+	AuthName = "schemas-upnp-org"
+	NTEvent  = "upnp:event"
+
 	EncodingStyle = "http://schemas.xmlsoap.org/soap/encoding/"
 	EnvelopeNS    = "http://schemas.xmlsoap.org/soap/envelope/"
 )

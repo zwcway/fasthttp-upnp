@@ -44,8 +44,8 @@ type Argument struct {
 }
 
 type Action struct {
-	Name      string     `xml:"name"`
-	Arguments []Argument `xml:"argumentList>argument"`
+	Name      string      `xml:"name"`
+	Arguments []*Argument `xml:"argumentList>argument"`
 }
 
 type SCPD struct {

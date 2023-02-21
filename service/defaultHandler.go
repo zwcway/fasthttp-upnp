@@ -1,7 +1,6 @@
-package upnp
+package service
 
 import (
-	"context"
 	"encoding/xml"
 	"fmt"
 	"reflect"
@@ -12,112 +11,6 @@ import (
 	"github.com/zwcway/fasthttp-upnp/scpd"
 	"github.com/zwcway/fasthttp-upnp/soap"
 )
-
-type httpHandler func(c *Controller, ctx *fasthttp.RequestCtx, uuid string) error
-
-type Controller struct {
-	SpecVersion scpd.SpecVersion
-	ServiceName string
-	PrefixPath  string
-
-	Event
-
-	Actions ActionMap
-
-	SCPDHandler    httpHandler
-	ControlHandler httpHandler
-	EventHandler   httpHandler
-
-	scpdHttpPath    string
-	controlHttpPath string
-	eventHttpPath   string
-
-	scpdXML []byte
-}
-
-func (c *Controller) Init(ctx context.Context) error {
-	c.PrefixPath = strings.Trim(c.PrefixPath, "/")
-	if c.PrefixPath != "" {
-		c.PrefixPath = "/" + c.PrefixPath
-	}
-	if c.SpecVersion.Major == 0 {
-		c.SpecVersion.Major = 1
-	}
-
-	c.scpdHttpPath = fmt.Sprintf("%s/%s%d.xml", c.PrefixPath, c.ServiceName, c.SpecVersion.Major)
-	c.controlHttpPath = fmt.Sprintf("%s/%s/control", c.PrefixPath, c.ServiceName)
-	c.eventHttpPath = fmt.Sprintf("%s/%s/event", c.PrefixPath, c.ServiceName)
-
-	if c.SCPDHandler == nil {
-		c.SCPDHandler = defaultSCPDHandler
-	}
-	if c.ControlHandler == nil {
-		c.ControlHandler = defaultControlHandler
-	}
-	if c.EventHandler == nil {
-		c.EventHandler = defaultEventHandler
-	}
-	if c.Actions == nil {
-		return fmt.Errorf("actions can not empty")
-	}
-
-	err := c.init()
-
-	return err
-}
-
-func (c *Controller) DeInit() {
-}
-
-func (c *Controller) init() (err error) {
-	var (
-		actions   []scpd.Action
-		variables []*scpd.Variable
-	)
-	for n, a := range c.Actions {
-		a.name = n
-		a.argInReflect = reflect.ValueOf(&a.ArgIn).Elem().Elem().Elem()
-		args := []scpd.Argument{}
-		for _, g := range a.arguments {
-			args = append(args, scpd.Argument{
-				Name:            g.Name,
-				Direction:       g.Direction,
-				RelatedStateVar: g.RelatedStateVar.Name,
-			})
-			variables = append(variables, g.RelatedStateVar)
-		}
-		actions = append(actions, scpd.Action{
-			Name:      n,
-			Arguments: args,
-		})
-	}
-	variables = sliceRemoveRepeatByLoop(variables)
-
-	var s = scpd.SCPD{
-		SpecVersion:       c.SpecVersion,
-		ActionList:        actions,
-		ServiceStateTable: variables,
-	}
-	c.scpdXML, err = xml.Marshal(s)
-	return
-}
-
-func (c *Controller) ServiceURN(auth string) string {
-	return fmt.Sprintf("%s:%d", c.ServiceId(auth), c.SpecVersion.Major)
-}
-
-func (c *Controller) ServiceId(auth string) string {
-	return fmt.Sprintf("urn:%s:service:%s", auth, c.ServiceName)
-}
-
-func (c *Controller) SCPDHttpPath(uuid string) string    { return "/" + uuid + c.scpdHttpPath }
-func (c *Controller) ControlHttpPath(uuid string) string { return "/" + uuid + c.controlHttpPath }
-func (c *Controller) EventHttpPath(uuid string) string   { return "/" + uuid + c.eventHttpPath }
-
-type ServiceController interface {
-	Init(ctx context.Context) error
-	Deinit()
-}
 
 func ParseSOAPAction(ctx *fasthttp.RequestCtx) (*soap.SoapAction, error) {
 	return soap.ParseSOAPAction(string(ctx.Request.Header.Peek("SOAPACTION")))
@@ -138,7 +31,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string)
 
 	var action *Action
 	for _, a := range c.Actions {
-		if a.Name() == soapAction.Action {
+		if a.Name == soapAction.Action {
 			action = a
 			break
 		}
@@ -156,7 +49,7 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string)
 
 	if action.Handler == nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
-		return fmt.Errorf("the action '%s' handler is nil", action.name)
+		return fmt.Errorf("the action '%s' handler is nil", action.Name)
 	}
 
 	action.Handler(action.ArgIn, action.ArgOut, ctx, uuid)
@@ -207,26 +100,16 @@ func ResponseError(ctx *fasthttp.RequestCtx, e *soap.Error) error {
 	return nil
 }
 
-func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error) {
-
-	for _, arg := range action.arguments {
-		if arg.Direction != DirIn {
-			continue
-		}
-		arv := action.argInReflect.FieldByName(arg.Name)
-
-		if !arv.IsValid() {
-			return soap.NewErrorf(fasthttp.StatusBadRequest, "argument '%s' not allowed", arg.Name)
-		}
-
-		reqArg := string(ctx.Request.Header.Peek(arg.Name))
+func parseRequestArguments(a *Action, ctx *fasthttp.RequestCtx) (err error) {
+	for _, arg := range a.inSoap {
+		reqArg := string(ctx.Request.Header.Peek(arg.name))
 		if reqArg == "" {
-			reqArg = arg.RelatedStateVar.Default
+			reqArg = arg.sv.Default
 		}
-		al := arg.RelatedStateVar.AllowedValues
-		ar := arg.RelatedStateVar.AllowedRange
-		switch arg.RelatedStateVar.DataType {
-		case DataTypeStr:
+		al := arg.sv.AllowedValues
+		ar := arg.sv.AllowedRange
+		switch arg.rv.Kind() {
+		case reflect.String:
 			allow := true
 			if al != nil {
 				allow = false
@@ -239,51 +122,67 @@ func parseRequestArguments(action *Action, ctx *fasthttp.RequestCtx) (err error)
 			}
 			if !allow {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "string value %s=%s must in list ", arg.Name, reqArg)
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "string value %s=%s must in list ", arg.name, reqArg)
 			}
-			arv.SetString(reqArg)
-		case DataTypeBool:
+			arg.rv.SetString(reqArg)
+		case reflect.Bool:
 			reqArg = strings.ToLower(reqArg)
 			if reqArg == "true" {
-				arv.SetBool(true)
+				arg.rv.SetBool(true)
 			} else if reqArg == "false" {
-				arv.SetBool(false)
+				arg.rv.SetBool(false)
 			} else {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "bool value %s=%s must boolean ", arg.Name, reqArg)
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "bool value %s=%s must boolean ", arg.name, reqArg)
 			}
-		case DataTypeInt32:
+		case reflect.Int32:
 			var i uint64
 			i, err = checkRequestInt(reqArg, al, ar, false, 32)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "int32 value %s=%s %s", arg.Name, reqArg, err.Error())
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "int32 value %s=%s %s", arg.name, reqArg, err.Error())
 			}
-			arv.SetInt(int64(i))
-		case DataTypeUint32:
+			arg.rv.SetInt(int64(i))
+		case reflect.Uint32:
 			var i uint64
 			i, err = checkRequestInt(reqArg, al, ar, true, 32)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint32 value %s=%s %s", arg.Name, reqArg, err.Error())
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint32 value %s=%s %s", arg.name, reqArg, err.Error())
 			}
-			arv.SetUint(i)
-		case DataTypeInt16:
+			arg.rv.SetUint(i)
+		case reflect.Int16:
 			var i uint64
 			i, err = checkRequestInt(reqArg, al, ar, true, 16)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "int16 value %s=%s %s", arg.Name, reqArg, err.Error())
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "int16 value %s=%s %s", arg.name, reqArg, err.Error())
 			}
-			arv.SetInt(int64(i))
-		case DataTypeUInt16:
+			arg.rv.SetInt(int64(i))
+		case reflect.Uint16:
 			var i uint64
 			i, err = checkRequestInt(reqArg, al, ar, true, 16)
 			if err != nil {
 				ctx.SetStatusCode(fasthttp.StatusBadRequest)
-				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint16 value %s=%s %s", arg.Name, reqArg, err.Error())
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint16 value %s=%s %s", arg.name, reqArg, err.Error())
 			}
-			arv.SetUint(i)
+			arg.rv.SetUint(i)
+		case reflect.Int8:
+			var i uint64
+			i, err = checkRequestInt(reqArg, al, ar, true, 8)
+			if err != nil {
+				ctx.SetStatusCode(fasthttp.StatusBadRequest)
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "int8 value %s=%s %s", arg.name, reqArg, err.Error())
+			}
+			arg.rv.SetInt(int64(i))
+		case reflect.Uint8:
+			var i uint64
+			i, err = checkRequestInt(reqArg, al, ar, true, 8)
+			if err != nil {
+				ctx.SetStatusCode(fasthttp.StatusBadRequest)
+				return soap.NewErrorf(fasthttp.StatusBadRequest, "uint8 value %s=%s %s", arg.name, reqArg, err.Error())
+			}
+			arg.rv.SetUint(i)
 		}
 	}
 
@@ -388,4 +287,8 @@ func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned 
 	}
 
 	return 0, fmt.Errorf("invalid value %s", reqArg)
+}
+
+func DefaultActionHandler(input any, output any, ctx *fasthttp.RequestCtx, uuid string) {
+
 }

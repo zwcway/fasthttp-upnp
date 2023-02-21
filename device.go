@@ -12,7 +12,10 @@ import (
 
 	"github.com/valyala/fasthttp"
 	"github.com/zwcway/fasthttp-upnp/scpd"
+	service "github.com/zwcway/fasthttp-upnp/service"
+	"github.com/zwcway/fasthttp-upnp/soap"
 	"github.com/zwcway/fasthttp-upnp/ssdp"
+	"github.com/zwcway/fasthttp-upnp/utils"
 )
 
 const (
@@ -37,7 +40,7 @@ type DeviceServer struct {
 	RootDescNamespaces map[string]string
 	UrlPrefix          string
 
-	ServiceList []*Controller
+	ServiceList []*service.Controller
 
 	BeforeRequestHandle func(ctx *fasthttp.RequestCtx) bool
 	AfterRequestHandle  func(ctx *fasthttp.RequestCtx) bool
@@ -84,7 +87,7 @@ func (s *DeviceServer) Init() (err error) {
 			return fmt.Errorf("FriendlyName con not empty")
 		}
 		if md.uuid == "" {
-			md.uuid = MakeUUID(md.name)
+			md.uuid = utils.MakeUUID(md.name)
 		}
 		if md.root == "" {
 			md.root = fmt.Sprintf("%s/%s/rootDesc.xml", s.UrlPrefix, md.uuid)
@@ -93,7 +96,7 @@ func (s *DeviceServer) Init() (err error) {
 		}
 	}
 	if s.AuthName == "" {
-		s.AuthName = AuthName
+		s.AuthName = soap.AuthName
 	}
 	if s.SpecVersion.Major == 0 {
 		s.SpecVersion.Major = 1
@@ -107,7 +110,7 @@ func (s *DeviceServer) Init() (err error) {
 		ss.Init(s.ctx)
 	}
 
-	address, err := getListenAddress(s.ListenInterface, s.ListenPort)
+	address, err := utils.GetListenAddress(s.ListenInterface, s.ListenPort)
 	if err != nil {
 		return err
 	}
@@ -188,7 +191,7 @@ func (s *DeviceServer) Connection() net.Listener {
 func NewDeviceServer(ctx context.Context, friendlyName string) (s *DeviceServer, err error) {
 	s = &DeviceServer{
 		ctx:          ctx,
-		MultiDevices: []*multiServer{{friendlyName, MakeUUID(friendlyName), ""}},
+		MultiDevices: []*multiServer{{friendlyName, utils.MakeUUID(friendlyName), ""}},
 	}
 
 	err = s.Init()
@@ -420,7 +423,7 @@ func (s *DeviceServer) startSSDP() error {
 	ss.ServerDesc = fmt.Sprintf("UPnP/1.0 %s", s.ServerName)
 	ss.Services = services
 	ss.ErrChan = s.ErrorChan
-	ss.InterfaceAddrsFilter = InterfaceAddrsFilter
+	ss.InterfaceAddrsFilter = utils.InterfaceAddrsFilter
 	ss.AllowIps = s.AllowIps
 	ss.DenyIps = s.DenyIps
 

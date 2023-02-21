@@ -1,4 +1,4 @@
-package upnp
+package utils
 
 import (
 	"crypto/md5"
@@ -24,7 +24,7 @@ var InterfaceAddrsFilter = func(iface *net.Interface, ip net.IP) bool {
 	return !ip.IsLoopback() && !ip.IsMulticast() && !ip.IsInterfaceLocalMulticast() && !ip.IsLinkLocalMulticast() && !ip.IsLinkLocalUnicast()
 }
 
-func getListenAddress(iface *net.Interface, port uint16) (address string, err error) {
+func GetListenAddress(iface *net.Interface, port uint16) (address string, err error) {
 	if iface != nil {
 		var addrs []net.Addr
 		addrs, err = iface.Addrs()
@@ -43,8 +43,4 @@ func getListenAddress(iface *net.Interface, port uint16) (address string, err er
 	}
 
 	return fmt.Sprintf(":%d", port), nil
-}
-
-func ServiceNS(service string, ver int) string {
-	return fmt.Sprintf("urn:%s:service:%s:%d", AuthName, service, ver)
 }

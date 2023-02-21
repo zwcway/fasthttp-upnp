@@ -10,6 +10,7 @@ require (
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/mewkiz/pkg v0.0.0-20220820102221-bbbca16e2a6c // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 )

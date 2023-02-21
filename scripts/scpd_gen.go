@@ -4,156 +4,252 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/mewkiz/pkg/pathutil"
 	"github.com/zwcway/fasthttp-upnp/scpd"
 )
 
-func printVaribale(scpds *scpd.SCPD, prefix string, fp *os.File) (vars map[string]string) {
+func checkVaribale(scpds *scpd.SCPD) {
 	sort.SliceStable(scpds.ServiceStateTable, func(i, j int) bool {
 		return strings.Compare(scpds.ServiceStateTable[i].Name, scpds.ServiceStateTable[j].Name) <= 0
 	})
-	vars = make(map[string]string)
-
 	for _, s := range scpds.ServiceStateTable {
-		ar := "nil"
 		if s.AllowedRange != nil {
-			ar = fmt.Sprintf("scpd.AllowRange{%d, %d,%d}", s.AllowedRange.Min, s.AllowedRange.Max, s.AllowedRange.Step)
+			if s.AllowedRange.Step == 0 {
+				s.AllowedRange.Step = 1
+			}
 		}
-		al := "nil"
 		if s.AllowedValues != nil {
-			al = "[]string{"
+			av := []string{}
 			for _, r := range *s.AllowedValues {
 				if strings.Contains(strings.ToLower(r), "vendor") {
 					continue
 				}
-				al += `"` + r + `",`
+				av = append(av, r)
 			}
-			al += "}"
+			s.AllowedValues = &av
 		}
 		if s.Default == "NOT_IMPLEMENTED" {
 			s.Default = ""
 		}
-		if s.SendEvents == "yes" {
-			s.SendEvents = "BoolYes"
-		} else if s.SendEvents == "no" {
-			s.SendEvents = "BoolNo"
-		}
-
-		if s.DataType == "string" {
-			vars[s.Name] = "string"
-			s.DataType = "DataTypeStr"
-		} else if s.DataType == "ui4" {
-			vars[s.Name] = "uint32"
-			s.DataType = "DataTypeUint32"
-		} else if s.DataType == "i4" {
-			vars[s.Name] = "int32"
-			s.DataType = "DataTypeInt32"
-		} else if s.DataType == "i2" {
-			vars[s.Name] = "int16"
-			s.DataType = "DataTypeInt16"
-		} else if s.DataType == "ui2" {
-			vars[s.Name] = "uint16"
-			s.DataType = "DataTypeUInt16"
-		} else if s.DataType == "i1" {
-			vars[s.Name] = "int8"
-			s.DataType = "DataTypeInt8"
-		} else if s.DataType == "ui1" {
-			vars[s.Name] = "uint8"
-			s.DataType = "DataTypeUInt8"
-		} else if s.DataType == "boolean" {
-			vars[s.Name] = "bool"
-			s.DataType = "DataTypeBool"
-		}
-		def := ""
-		if s.Default != "" {
-			def = fmt.Sprintf("Default:\"%s\",\n", s.Default)
-		}
-		if al != "nil" {
-			al = fmt.Sprintf("AllowedValues:&%s,\n", al)
-		} else {
-			al = ""
-		}
-		if ar != "nil" {
-			ar = fmt.Sprintf("AllowedRange:&%s,\n", ar)
-		} else {
-			ar = ""
-		}
-
-		fp.WriteString(fmt.Sprintf(`var %s_%s = scpd.Variable{
-	Name:"%s",
-	DataType:%s,
-	SendEvents:%s,
-%s%s%s
-}
-`, prefix, s.Name, s.Name, s.DataType, s.SendEvents, def, al, ar))
 	}
 
 	return
 }
 
-func printActions(scpds *scpd.SCPD, srvName, prefix string, fp *os.File, vars map[string]string, version int) {
+func printArguments(scpds *scpd.SCPD, pwd, srvName string, version string) {
+	file := filepath.Join(filepath.Dir(pwd), strings.ToLower(srvName)+version, "arguments.go")
+	fp, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, os.ModeAppend|os.ModePerm)
+	if err != nil {
+		fmt.Println("open failed", file)
+		return
+	}
+	defer func() {
+		fp.Close()
+		exec.Command("gofmt", "-e", "-w", file).Start()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+	fp.Truncate(0)
+	fp.WriteString(fmt.Sprintf(`package %s%s
+import 	"encoding/xml"
+`, strings.ToLower(srvName), version))
+
 	sort.SliceStable(scpds.ActionList, func(i, j int) bool {
 		return strings.Compare(scpds.ActionList[i].Name, scpds.ActionList[j].Name) <= 0
 	})
-	actions := ""
-	for _, s := range scpds.ActionList {
-		args := ""
-		argStructIn := fmt.Sprintf("XMLName xml.Name `xml:\"urn:schemas-upnp-org:service:%s:%d %s\"`\n", srvName, version, s.Name)
-		argStructOut := fmt.Sprintf("XMLName xml.Name `xml:\"u:%sResponse\"`\nXMLPrefix string `xml:\"xmlns:u,attr\"`\n", s.Name)
-		for _, sa := range s.Arguments {
-			// sa.Direction = `"` + sa.Direction + `"`
-			if sa.Direction == "in" {
-				sa.Direction = "DirIn"
-				argStructIn += fmt.Sprintf("%s %s\n", sa.Name, vars[sa.RelatedStateVar])
-			} else if sa.Direction == "out" {
-				sa.Direction = "DirOut"
-				argStructOut += fmt.Sprintf("%s %s\n", sa.Name, vars[sa.RelatedStateVar])
-			}
 
-			args += fmt.Sprintf("{\"%s\", %s, &%s_%s},\n", sa.Name, sa.Direction, prefix, sa.RelatedStateVar)
+	for _, s := range scpds.ActionList {
+		sort.SliceStable(s.Arguments, func(i, j int) bool {
+			return strings.Compare(s.Arguments[i].Name, s.Arguments[j].Name) <= 0
+		})
+		argInCode := ""
+		argOutCode := ""
+		for _, a := range s.Arguments {
+			var sv *scpd.Variable
+			for _, v := range scpds.ServiceStateTable {
+				if v.Name == a.RelatedStateVar {
+					sv = v
+					break
+				}
+			}
+			if sv == nil {
+				fmt.Printf("error not found variable '%s'\n", a.RelatedStateVar)
+				continue
+			}
+			an := sv.Name
+			if sv.Default != "" {
+				an += " " + sv.Default
+			}
+			at := ""
+			switch sv.DataType {
+			case "i1":
+				at = "int8"
+			case "i2":
+				at = "int16"
+			case "i4":
+				at = "int32"
+			case "ui1":
+				at = "uint8"
+			case "ui2":
+				at = "uint16"
+			case "ui4":
+				at = "uint32"
+			case "boolean":
+				at = "bool"
+			case "string":
+				at = "string"
+			}
+			if sv.SendEvents == "yes" {
+				an += ",sendevent"
+			}
+			if an != "" {
+				an = fmt.Sprintf("soap:\"%s\"", an)
+			}
+			if sv.AllowedRange != nil {
+				an = fmt.Sprintf("%s range:\"%d,%d,%d\"", an, sv.AllowedRange.Max, sv.AllowedRange.Min, sv.AllowedRange.Step)
+			}
+			if sv.AllowedValues != nil {
+				an = fmt.Sprintf("%s allowed:\"%s\"", an, strings.Join(*sv.AllowedValues, ","))
+			}
+			if an != "" {
+				an = fmt.Sprintf("`%s`", an)
+			}
+			if a.Direction == "in" {
+				argInCode += fmt.Sprintf("	%s %s %s\n", a.Name, at, an)
+			} else if a.Direction == "out" {
+				argOutCode += fmt.Sprintf("	%s %s %s\n", a.Name, at, an)
+			} else {
+				fmt.Printf("argument '%s' direction '%s' invalid for action '%s' service '%s'\n", a.Name, a.Direction, s.Name, srvName)
+			}
 		}
 
-		fp.WriteString(fmt.Sprintf("type %sArgIn_%s struct{\n%s}\n", prefix, s.Name, argStructIn))
-		fp.WriteString(fmt.Sprintf("type %sArgOut_%s struct{\n%s}\n", prefix, s.Name, argStructOut))
-
-		fp.WriteString(fmt.Sprintf("var %[1]s_%[2]s = Action{\nHandler:nil,\nArgIn: &%[1]sArgIn_%[2]s{},\nArgOut: &%[1]sArgOut_%[2]s{XMLPrefix: ServiceNS(ServiceName_%[4]s, %d)},\narguments:[]Argument{\n%[3]s\n},\n}\n", prefix, s.Name, args, srvName, version))
-
-		actions += fmt.Sprintf("\"%s\": &%s_%s,\n", s.Name, prefix, s.Name)
+		fp.WriteString(fmt.Sprintf(`
+type ArgIn%[2]s struct {
+	XMLName    xml.Name %[1]sxml:"urn:schemas-upnp-org:service:%[3]s:%[4]s %[2]s"%[1]s
+%[5]s
+}`, "`", s.Name, srvName, version, argInCode))
+		fp.WriteString(fmt.Sprintf(`
+type ArgOut%[2]s struct {
+	XMLName    xml.Name %[1]sxml:"urn:schemas-upnp-org:service:%[3]s:%[4]s %[2]sResponse"%[1]s
+%[5]s
+}`, "`", s.Name, srvName, version, argOutCode))
 	}
-	fp.WriteString(fmt.Sprintf("var %sV1= ActionMap{\n%s}\n", srvName, actions))
 }
 
-func printArguments(scpds *scpd.SCPD) {
-	argsMap := map[string]scpd.Argument{}
+func printActions(scpds *scpd.SCPD, pwd, srvName string, version string) {
+	file := filepath.Join(filepath.Dir(pwd), strings.ToLower(srvName)+version, "actions.go")
+
+	fp, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, os.ModeAppend|os.ModePerm)
+	if err != nil {
+		fmt.Println("open failed", file)
+		return
+	}
+	defer func() {
+		fp.Close()
+
+		exec.Command("gofmt", "-e", "-w", file).Start()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	fp.Truncate(0)
+	fp.WriteString(fmt.Sprintf(`package %s%s
+import (
+	"github.com/zwcway/fasthttp-upnp/service"
+)
+`, strings.ToLower(srvName), version))
+
 	for _, s := range scpds.ActionList {
-		for _, r := range s.Arguments {
-			if a, ok := argsMap[r.Name]; ok && a.Direction != r.Direction {
-				fmt.Println("action", s.Name, "arg", a.Name)
-				panic("direction ")
-			}
-			argsMap[r.Name] = r
+		fp.WriteString(fmt.Sprintf(`func %[1]s(handle service.ActionHandler) *service.Action {
+	return &service.Action{
+		Name:    "%[1]s",
+		Handler: handle,
+		ArgIn:   &ArgIn%[1]s{},
+		ArgOut:  &ArgOut%[1]s{},
+	}
+}
+	`, s.Name))
+	}
+}
+func printController(scpds *scpd.SCPD, pwd, srvName string, version string) {
+	file := filepath.Join(filepath.Dir(pwd), strings.ToLower(srvName)+version, "controller.go")
+
+	fp, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, os.ModeAppend|os.ModePerm)
+	if err != nil {
+		fmt.Println("open failed", file)
+		return
+	}
+	defer func() {
+		fp.Close()
+
+		exec.Command("gofmt", "-e", "-w", file).Start()
+		if err != nil {
+			fmt.Println(err)
 		}
+	}()
+	actions := ""
+	for _, s := range scpds.ActionList {
+		actions += (fmt.Sprintf("			%s(service.DefaultActionHandler),\n", s.Name))
 	}
-	args := []scpd.Argument{}
-	for _, s := range argsMap {
-		args = append(args, s)
+	fp.Truncate(0)
+	fp.WriteString(fmt.Sprintf(`package %s%s
+import (
+	"github.com/zwcway/fasthttp-upnp/service"
+)
+
+func ServiceController() *service.Controller {
+	return &service.Controller{
+		ServiceName: NAME,
+		Actions:     []*service.Action{
+%s			
+		},
 	}
-	sort.SliceStable(args, func(i, j int) bool {
-		return strings.Compare(args[i].Name, args[j].Name) <= 0
-	})
-	for _, arg := range args {
-		if arg.Direction == "in" {
-			arg.Direction = "DirIn"
-		} else if arg.Direction == "out" {
-			arg.Direction = "DirOut"
+}
+
+`, strings.ToLower(srvName), version, actions))
+
+}
+
+func printTypes(scpds *scpd.SCPD, pwd, srvName string, version string) {
+	file := filepath.Join(filepath.Dir(pwd), strings.ToLower(srvName)+version, "types.go")
+
+	fp, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, os.ModeAppend|os.ModePerm)
+	if err != nil {
+		fmt.Println("open failed", file)
+		return
+	}
+	defer func() {
+		fp.Close()
+
+		exec.Command("gofmt", "-e", "-w", file).Start()
+		if err != nil {
+			fmt.Println(err)
 		}
-		fmt.Printf("var Arg%s = Argument{\nName:\"%s\",\nDirection:%s,\nRelatedStateVar:&%s,\n}\n", arg.Name, arg.Name, arg.Direction, arg.RelatedStateVar)
-	}
+	}()
+
+	fp.Truncate(0)
+	fp.WriteString(fmt.Sprintf(`package %s%s
+import (
+	"github.com/zwcway/fasthttp-upnp/service"
+)
+
+const (
+	NAME    = service.ServiceName_%[3]s
+	VERSION = %[2]s
+)
+
+`, strings.ToLower(srvName), version, srvName))
 }
 func main() {
 	var version uint64
@@ -164,19 +260,26 @@ func main() {
 		version = 1
 	}
 
-	files := map[string]string{
-		"AVT": "AVTransport",
-		"CM":  "ConnectionManager",
-		"RC":  "RenderingControl",
-	}
-
 	regexpRemoveVendor := regexp.MustCompile(`(?i) *<allowedValue> *vendor.*?\n`)
 	regexpReplaceVendor := regexp.MustCompile(`(?i)(.+?>).*?Vendor.+?(<.+?)\n`)
 
-	for p, f := range files {
-		var scpd scpd.SCPD
+	pwd, _ := os.Getwd()
+	serviceDir := filepath.Join(pwd, "services")
+	files, err := ioutil.ReadDir(serviceDir)
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range files {
+		if file.IsDir() || strings.ToLower(path.Ext(file.Name())) != ".xml" {
+			continue
+		}
+		f := pathutil.FileName(file.Name())
+		version := f[len(f)-1:]
+		f = f[:len(f)-1]
 
-		fileXMLBytes, err := os.ReadFile(fmt.Sprintf("%sV%d.xml", f, version))
+		var scpds scpd.SCPD
+
+		fileXMLBytes, err := os.ReadFile(filepath.Join(serviceDir, file.Name()))
 		if err != nil {
 			fmt.Println("file", f)
 			panic(err)
@@ -185,36 +288,26 @@ func main() {
 		fileXMLBytes = regexpRemoveVendor.ReplaceAll(fileXMLBytes, []byte{})
 		fileXMLBytes = regexpReplaceVendor.ReplaceAll(fileXMLBytes, []byte("$1 0 $2"))
 
-		err = xml.Unmarshal(fileXMLBytes, &scpd)
+		err = xml.Unmarshal(fileXMLBytes, &scpds)
 		if err != nil {
 			fmt.Println("file", f)
 			panic(err)
 		}
 
-		file := fmt.Sprintf("../service_%s.go", f)
-		fp, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0)
-		if err != nil {
-			fmt.Println("file", file)
-			panic(err)
+		path := fmt.Sprintf("../%s%s", strings.ToLower(f), version)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err = os.Mkdir(path, os.ModePerm)
+			if err != nil {
+				fmt.Printf("mkdir failed %s", err.Error())
+				continue
+			}
 		}
-		fp.Truncate(0)
-		fp.WriteString(`package upnp
-import (
-	"encoding/xml"
-	"github.com/zwcway/fasthttp-upnp/scpd"
-)
 
-`)
-
-		vars := printVaribale(&scpd, p, fp)
-		printActions(&scpd, f, p, fp, vars, int(version))
-
-		fp.Close()
-
-		err = exec.Command("gofmt", "-e", "-w", file).Start()
-		if err != nil {
-			fmt.Println(err)
-		}
+		checkVaribale(&scpds)
+		printArguments(&scpds, pwd, f, (version))
+		printActions(&scpds, pwd, f, (version))
+		printController(&scpds, pwd, f, (version))
+		printTypes(&scpds, pwd, f, (version))
 	}
 
 }

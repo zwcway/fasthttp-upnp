@@ -11,6 +11,9 @@ import (
 
 	"github.com/valyala/fasthttp"
 	upnp "github.com/zwcway/fasthttp-upnp"
+	"github.com/zwcway/fasthttp-upnp/avtransport1"
+	"github.com/zwcway/fasthttp-upnp/service"
+	"github.com/zwcway/fasthttp-upnp/utils"
 )
 
 var (
@@ -35,21 +38,45 @@ func main() {
 
 	uuids := map[string]string{}
 	for _, n := range []string{"我是DLNA", "备用DLNA"} {
-		uuids[upnp.MakeUUID(n)] = n
+		uuids[utils.MakeUUID(n)] = n
 	}
 	upnpSrv, err := upnp.NewDeviceServers(ctx, uuids)
 	if err != nil {
 		return
 	}
-	upnpSrv.DeviceType = upnp.DeviceType_MediaRenderer
+	upnpSrv.DeviceType = service.DeviceType_MediaRenderer
 	upnpSrv.ServerName = "UPnPServer/1.0"
 	upnpSrv.RootDescNamespaces = map[string]string{
 		"xmlns:dlna": "urn:schemas-dlna-org:device-1-0",
 	}
-	upnpSrv.ServiceList = []*upnp.Controller{
+	upnpSrv.ServiceList = []*service.Controller{
 		{
-			ServiceName: upnp.ServiceName_AVTransport,
-			Actions:     upnp.AVTransportV1,
+			ServiceName: avtransport1.NAME,
+			Actions: []*service.Action{
+				avtransport1.GetPositionInfo(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+					out := output.(*avtransport1.ArgOutGetPositionInfo)
+
+					out.TrackDuration = fmt.Sprintf("00:00:%2d", playDur)
+					out.TrackURI = playUrl
+				}),
+				avtransport1.Pause(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+					ticker.Stop()
+				}),
+				avtransport1.Play(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+					playDur = 0
+					ticker.Reset(time.Second)
+				}),
+				avtransport1.SetAVTransportURI(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+					in := input.(*avtransport1.ArgInSetAVTransportURI)
+
+					playUrl = in.CurrentURI
+					fmt.Println(in.InstanceID, in.CurrentURI)
+				}),
+				avtransport1.Stop(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+					playDur = 0
+					ticker.Stop()
+				}),
+			},
 		},
 	}
 	// upnpSrv.ListenPort = 1900
@@ -61,34 +88,6 @@ func main() {
 	upnpSrv.BeforeRequestHandle = func(ctx *fasthttp.RequestCtx) bool {
 		fmt.Println("from", ctx.RemoteAddr(), ctx.Request.String())
 		return true
-	}
-
-	upnp.AVT_SetAVTransportURI.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
-		in := input.(*upnp.AVTArgIn_SetAVTransportURI)
-
-		playUrl = in.CurrentURI
-
-		fmt.Println(in.InstanceID, in.CurrentURI)
-	}
-	upnp.AVT_GetPositionInfo.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
-		out := output.(*upnp.AVTArgOut_GetPositionInfo)
-
-		playDur++
-
-		out.TrackDuration = fmt.Sprintf("00:00:%2d", playDur)
-
-		out.TrackURI = playUrl
-	}
-	upnp.AVT_Play.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
-		playDur = 0
-		ticker.Reset(time.Second)
-	}
-	upnp.AVT_Pause.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
-		ticker.Stop()
-	}
-	upnp.AVT_Stop.Handler = func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
-		playDur = 0
-		ticker.Stop()
 	}
 
 	err = upnpSrv.Init()
