@@ -52,6 +52,7 @@ type DeviceServer struct {
 	DenyIps  []*net.IPNet
 
 	ErrorChan chan error
+	InfoChan  chan string
 
 	ssdpList     []ssdp.SSDPServer
 	ctx          context.Context
@@ -138,7 +139,12 @@ func (s *DeviceServer) Init() (err error) {
 	}
 
 	s.listenedAddr = s.conn.Addr().(*net.TCPAddr)
-	s.ErrorChan = make(chan error, 10)
+	if s.ErrorChan == nil {
+		s.ErrorChan = make(chan error, 10)
+	}
+	if s.InfoChan == nil {
+		s.InfoChan = make(chan string, 50)
+	}
 
 	bufio := &bytes.Buffer{}
 	err = xml.NewEncoder(bufio).EncodeElement(s.makeDevice(), s.makeXMLStart())
@@ -240,6 +246,8 @@ func (s *DeviceServer) Serve() error {
 	if err != nil {
 		return err
 	}
+
+	s.notifyInfo("UPnP: listen on " + s.conn.Addr().String())
 
 	server := fasthttp.Server{Handler: s.httpHandler}
 	server.Serve(s.conn)
@@ -402,6 +410,13 @@ func (s *DeviceServer) notifyError(err error) {
 	s.ErrorChan <- err
 }
 
+func (s *DeviceServer) notifyInfo(err string) {
+	if s.InfoChan == nil || len(s.InfoChan) == cap(s.InfoChan) {
+		return
+	}
+	s.InfoChan <- err
+}
+
 func (s *DeviceServer) startSSDP() error {
 	services := []string{}
 	for _, srv := range s.makeServices() {
@@ -422,7 +437,8 @@ func (s *DeviceServer) startSSDP() error {
 	ss.Location = s.makeSSDPLocation
 	ss.ServerDesc = fmt.Sprintf("UPnP/1.0 %s", s.ServerName)
 	ss.Services = services
-	ss.ErrChan = s.ErrorChan
+	ss.ErrorChan = s.ErrorChan
+	ss.InfoChan = s.InfoChan
 	ss.InterfaceAddrsFilter = utils.InterfaceAddrsFilter
 	ss.AllowIps = s.AllowIps
 	ss.DenyIps = s.DenyIps

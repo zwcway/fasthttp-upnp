@@ -37,7 +37,8 @@ type ssdpServer struct {
 	listenAddr *net.UDPAddr
 	multi      []*multiConn
 
-	ErrChan chan error
+	ErrorChan chan error
+	InfoChan  chan string
 
 	uuids      []string
 	ServerDesc string
@@ -190,6 +191,8 @@ func (s *ssdpServer) ListenAndServe() (err error) {
 			continue
 		}
 
+		s.notifyInfo("SSDP: listen on " + mc.ifi.Name)
+
 		go s.readUdpRoutine(mc)
 
 		sucCount++
@@ -321,6 +324,8 @@ func (s *ssdpServer) readRequestRoutine(buf []byte, src *net.UDPAddr) {
 		return
 	}
 
+	s.notifyInfo("SSDP: request from " + src.String())
+
 	io := bufio.NewReader(bytes.NewReader(buf))
 	req, err := http.ReadRequest(io)
 	if err != nil {
@@ -438,7 +443,7 @@ func (s *ssdpServer) sendByeBye() {
 			if mc.conn == nil {
 				continue
 			}
-
+			s.notifyInfo("SSDP: byebye")
 			for _, nt := range s.ntList() {
 				buf := s.makeNotify(uuid, nt, "ssdp:byebye", nil)
 				mc.conn.WriteToUDP(buf, s.listenAddr)
@@ -455,9 +460,15 @@ func (s *ssdpServer) sendAlive(mc *multiConn, uuid string, extHeads map[string]s
 }
 
 func (s *ssdpServer) notifyError(err error) {
-	if s.ErrChan == nil || len(s.ErrChan) == cap(s.ErrChan) {
+	if s.ErrorChan == nil || len(s.ErrorChan) == cap(s.ErrorChan) {
 		return
 	}
 
-	s.ErrChan <- &SSDPError{err}
+	s.ErrorChan <- &SSDPError{err}
+}
+func (s *ssdpServer) notifyInfo(err string) {
+	if s.InfoChan == nil || len(s.InfoChan) == cap(s.InfoChan) {
+		return
+	}
+	s.InfoChan <- err
 }

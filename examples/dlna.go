@@ -13,6 +13,7 @@ import (
 	upnp "github.com/zwcway/fasthttp-upnp"
 	"github.com/zwcway/fasthttp-upnp/avtransport1"
 	"github.com/zwcway/fasthttp-upnp/service"
+	"github.com/zwcway/fasthttp-upnp/ssdp"
 	"github.com/zwcway/fasthttp-upnp/utils"
 )
 
@@ -115,6 +116,11 @@ func main() {
 			upnpSrv.Close()
 			return
 		case err := <-upnpSrv.ErrorChan:
+			if ssdp.IsIPDenyError(err) {
+				break
+			}
+			fmt.Println(err)
+		case err := <-upnpSrv.InfoChan:
 			fmt.Println(err)
 		}
 	}
