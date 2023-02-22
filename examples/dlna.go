@@ -54,28 +54,33 @@ func main() {
 		{
 			ServiceName: avtransport1.NAME,
 			Actions: []*service.Action{
-				avtransport1.GetPositionInfo(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+				avtransport1.GetPositionInfo(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) error {
 					out := output.(*avtransport1.ArgOutGetPositionInfo)
 
 					out.TrackDuration = fmt.Sprintf("00:00:%2d", playDur)
 					out.TrackURI = playUrl
+					return nil
 				}),
-				avtransport1.Pause(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+				avtransport1.Pause(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) error {
 					ticker.Stop()
+					return nil
 				}),
-				avtransport1.Play(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+				avtransport1.Play(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) error {
 					playDur = 0
 					ticker.Reset(time.Second)
+					return nil
 				}),
-				avtransport1.SetAVTransportURI(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+				avtransport1.SetAVTransportURI(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) error {
 					in := input.(*avtransport1.ArgInSetAVTransportURI)
 
 					playUrl = in.CurrentURI
 					fmt.Println(in.InstanceID, in.CurrentURI)
+					return nil
 				}),
-				avtransport1.Stop(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) {
+				avtransport1.Stop(func(input, output any, ctx *fasthttp.RequestCtx, uuid string) error {
 					playDur = 0
 					ticker.Stop()
+					return nil
 				}),
 			},
 		},

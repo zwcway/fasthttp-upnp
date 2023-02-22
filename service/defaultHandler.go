@@ -52,7 +52,16 @@ func defaultControlHandler(c *Controller, ctx *fasthttp.RequestCtx, uuid string)
 		return fmt.Errorf("the action '%s' handler is nil", action.Name)
 	}
 
-	action.Handler(action.ArgIn, action.ArgOut, ctx, uuid)
+	err = action.Handler(action.ArgIn, action.ArgOut, ctx, uuid)
+	if err != nil {
+		if re, ok := err.(*soap.Error); ok {
+			ResponseError(ctx, re)
+			return err
+		}
+		re := &soap.Error{Code: fasthttp.StatusInternalServerError, Desc: err.Error()}
+		ResponseError(ctx, re)
+		return re
+	}
 
 	var resp []byte
 	resp, err = marshalActionResponse(action, c)
@@ -289,6 +298,6 @@ func checkRequestInt(reqArg string, al *[]string, ar *scpd.AllowRange, unsigned 
 	return 0, fmt.Errorf("invalid value %s", reqArg)
 }
 
-func DefaultActionHandler(input any, output any, ctx *fasthttp.RequestCtx, uuid string) {
-
+func DefaultActionHandler(input any, output any, ctx *fasthttp.RequestCtx, uuid string) error {
+	return &soap.Error{Code: fasthttp.StatusInternalServerError, Desc: "unhandle action"}
 }

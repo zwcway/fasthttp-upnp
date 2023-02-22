@@ -20,7 +20,7 @@ const (
 
 const ResponseContentTypeXML = `text/xml; charset="utf-8"`
 
-type ActionHandler func(input any, output any, ctx *fasthttp.RequestCtx, uuid string)
+type ActionHandler func(input any, output any, ctx *fasthttp.RequestCtx, uuid string) error
 
 type Argument struct {
 	Name            string
