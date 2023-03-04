@@ -74,15 +74,41 @@ func (s *DeviceServer) makeXMLStart() xml.StartElement {
 	}
 }
 
-func (s *DeviceServer) Init() (err error) {
-	if s.ctx == nil {
-		return fmt.Errorf("context can not nil")
+func (s *DeviceServer) AddServer(name, uuid, root string) string {
+	if uuid == "" {
+		uuid = utils.MakeUUID(name)
 	}
-	s.UrlPrefix = strings.Trim(s.UrlPrefix, "/")
-	if s.UrlPrefix != "" {
-		s.UrlPrefix = "/" + s.UrlPrefix
+	for _, ms := range s.MultiDevices {
+		if ms.uuid == uuid {
+			ms.name = name
+			if root != "" {
+				ms.root = root
+			}
+			s.initMultiServer()
+			return ms.uuid
+		}
 	}
+	s.MultiDevices = append(s.MultiDevices, &multiServer{name, uuid, root})
+	s.initMultiServer()
 
+	return uuid
+}
+
+func (s *DeviceServer) DelServer(uuid string) {
+	for i, ms := range s.MultiDevices {
+		if ms.uuid == uuid {
+			if i == len(s.MultiDevices)-1 {
+				s.MultiDevices = s.MultiDevices[:i]
+				return
+			}
+			s.MultiDevices = append(s.MultiDevices[:i], s.MultiDevices[i+1:]...)
+			return
+		}
+	}
+	s.initMultiServer()
+}
+
+func (s *DeviceServer) initMultiServer() error {
 	for _, md := range s.MultiDevices {
 		if md.name == "" {
 			return fmt.Errorf("FriendlyName con not empty")
@@ -96,6 +122,22 @@ func (s *DeviceServer) Init() (err error) {
 			md.root = fmt.Sprintf("%s/%s", s.UrlPrefix, strings.Trim(md.root, "/"))
 		}
 	}
+	return nil
+}
+
+func (s *DeviceServer) Init() (err error) {
+	if s.ctx == nil {
+		return fmt.Errorf("context can not nil")
+	}
+	s.UrlPrefix = strings.Trim(s.UrlPrefix, "/")
+	if s.UrlPrefix != "" {
+		s.UrlPrefix = "/" + s.UrlPrefix
+	}
+
+	if err := s.initMultiServer(); err != nil {
+		return err
+	}
+
 	if s.AuthName == "" {
 		s.AuthName = soap.AuthName
 	}
@@ -194,28 +236,11 @@ func (s *DeviceServer) Connection() net.Listener {
 	return s.conn
 }
 
-func NewDeviceServer(ctx context.Context, friendlyName string) (s *DeviceServer, err error) {
+func NewDeviceServer(ctx context.Context, friendlyName string) (s *DeviceServer, uuid string, err error) {
+	uuid = utils.MakeUUID(friendlyName)
 	s = &DeviceServer{
 		ctx:          ctx,
-		MultiDevices: []*multiServer{{friendlyName, utils.MakeUUID(friendlyName), ""}},
-	}
-
-	err = s.Init()
-
-	return
-}
-
-// friendlyNames 格式为 uuid:friendlyName
-func NewDeviceServers(ctx context.Context, friendlyNames map[string]string) (s *DeviceServer, err error) {
-	s = &DeviceServer{
-		ctx: ctx,
-		MultiDevices: func(names map[string]string) []*multiServer {
-			ret := []*multiServer{}
-			for uuid, friendlyName := range names {
-				ret = append(ret, &multiServer{friendlyName, uuid, ""})
-			}
-			return ret
-		}(friendlyNames),
+		MultiDevices: []*multiServer{{friendlyName, uuid, ""}},
 	}
 
 	err = s.Init()
