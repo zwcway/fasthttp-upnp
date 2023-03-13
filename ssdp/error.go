@@ -52,16 +52,10 @@ func (e *InterfaceError) Error() (s string) {
 }
 
 func IsIPDenyError(err error) bool {
-	if IsSSDPError(err) {
-		return true
-	}
 	_, ok := err.(*IPDenyError)
 	return ok
 }
 func IsRequestError(err error) bool {
-	if IsSSDPError(err) {
-		return true
-	}
 	_, ok := err.(*RequestError)
 	return ok
 }
@@ -73,3 +67,6 @@ func IsInterfaceError(err error) bool {
 	_, ok := err.(*InterfaceError)
 	return ok
 }
+
+type ErrorHandler func(error)
+type InfoHandler func(string)

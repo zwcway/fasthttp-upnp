@@ -51,8 +51,8 @@ type DeviceServer struct {
 	AllowIps []*net.IPNet
 	DenyIps  []*net.IPNet
 
-	ErrorChan chan error
-	InfoChan  chan string
+	ErrorHandler ssdp.ErrorHandler
+	InfoHandler  ssdp.InfoHandler
 
 	ssdpList     []ssdp.SSDPServer
 	ctx          context.Context
@@ -181,12 +181,6 @@ func (s *DeviceServer) Init() (err error) {
 	}
 
 	s.listenedAddr = s.conn.Addr().(*net.TCPAddr)
-	if s.ErrorChan == nil {
-		s.ErrorChan = make(chan error, 10)
-	}
-	if s.InfoChan == nil {
-		s.InfoChan = make(chan string, 50)
-	}
 
 	bufio := &bytes.Buffer{}
 	err = xml.NewEncoder(bufio).EncodeElement(s.makeDevice(), s.makeXMLStart())
@@ -429,17 +423,17 @@ func (s *DeviceServer) makeSSDPLocation(uuid string, ip net.IP) string {
 }
 
 func (s *DeviceServer) notifyError(err error) {
-	if s.ErrorChan == nil || len(s.ErrorChan) == cap(s.ErrorChan) {
+	if s.ErrorHandler == nil {
 		return
 	}
-	s.ErrorChan <- err
+	s.ErrorHandler(err)
 }
 
 func (s *DeviceServer) notifyInfo(err string) {
-	if s.InfoChan == nil || len(s.InfoChan) == cap(s.InfoChan) {
+	if s.InfoHandler == nil {
 		return
 	}
-	s.InfoChan <- err
+	s.InfoHandler(err)
 }
 
 func (s *DeviceServer) startSSDP() error {
@@ -462,8 +456,8 @@ func (s *DeviceServer) startSSDP() error {
 	ss.Location = s.makeSSDPLocation
 	ss.ServerDesc = fmt.Sprintf("UPnP/1.0 %s", s.ServerName)
 	ss.Services = services
-	ss.ErrorChan = s.ErrorChan
-	ss.InfoChan = s.InfoChan
+	ss.ErrorHandler = s.ErrorHandler
+	ss.InfoHandler = s.InfoHandler
 	ss.InterfaceAddrsFilter = utils.InterfaceAddrsFilter
 	ss.AllowIps = s.AllowIps
 	ss.DenyIps = s.DenyIps

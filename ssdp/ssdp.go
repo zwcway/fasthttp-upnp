@@ -37,8 +37,8 @@ type ssdpServer struct {
 	listenAddr *net.UDPAddr
 	multi      []*multiConn
 
-	ErrorChan chan error
-	InfoChan  chan string
+	ErrorHandler ErrorHandler
+	InfoHandler  InfoHandler
 
 	uuids      []string
 	ServerDesc string
@@ -460,15 +460,15 @@ func (s *ssdpServer) sendAlive(mc *multiConn, uuid string, extHeads map[string]s
 }
 
 func (s *ssdpServer) notifyError(err error) {
-	if s.ErrorChan == nil || len(s.ErrorChan) == cap(s.ErrorChan) {
+	if s.ErrorHandler == nil {
 		return
 	}
 
-	s.ErrorChan <- &SSDPError{err}
+	s.ErrorHandler(&SSDPError{err})
 }
 func (s *ssdpServer) notifyInfo(err string) {
-	if s.InfoChan == nil || len(s.InfoChan) == cap(s.InfoChan) {
+	if s.InfoHandler == nil {
 		return
 	}
-	s.InfoChan <- err
+	s.InfoHandler(err)
 }
