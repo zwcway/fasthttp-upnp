@@ -54,7 +54,7 @@ type DeviceServer struct {
 	ErrorHandler ssdp.ErrorHandler
 	InfoHandler  ssdp.InfoHandler
 
-	ssdpList     []ssdp.SSDPServer
+	ssdp         ssdp.SSDPServer
 	ctx          context.Context
 	conn         net.Listener
 	listenedAddr *net.TCPAddr
@@ -109,6 +109,8 @@ func (s *DeviceServer) DelServer(uuid string) {
 }
 
 func (s *DeviceServer) initMultiServer() error {
+	uuids := []string{}
+
 	for _, md := range s.MultiDevices {
 		if md.name == "" {
 			return fmt.Errorf("FriendlyName con not empty")
@@ -121,7 +123,14 @@ func (s *DeviceServer) initMultiServer() error {
 		} else {
 			md.root = fmt.Sprintf("%s/%s", s.UrlPrefix, strings.Trim(md.root, "/"))
 		}
+
+		uuids = append(uuids, md.uuid)
 	}
+
+	if s.ssdp != nil {
+		s.ssdp.SetUUIDs(uuids)
+	}
+
 	return nil
 }
 
@@ -230,11 +239,10 @@ func (s *DeviceServer) Connection() net.Listener {
 	return s.conn
 }
 
-func NewDeviceServer(ctx context.Context, friendlyName string) (s *DeviceServer, uuid string, err error) {
-	uuid = utils.MakeUUID(friendlyName)
+func NewDeviceServer(ctx context.Context) (s *DeviceServer, err error) {
 	s = &DeviceServer{
 		ctx:          ctx,
-		MultiDevices: []*multiServer{{friendlyName, uuid, ""}},
+		MultiDevices: []*multiServer{},
 	}
 
 	err = s.Init()
@@ -246,9 +254,7 @@ func (s *DeviceServer) Close() {
 	if s.conn == nil {
 		return
 	}
-	for _, ss := range s.ssdpList {
-		ss.Close()
-	}
+	s.ssdp.Close()
 	for _, ss := range s.ServiceList {
 		ss.DeInit()
 	}
@@ -451,7 +457,7 @@ func (s *DeviceServer) startSSDP() error {
 		s.notifyError(err)
 		return err
 	}
-	s.ssdpList = append(s.ssdpList, ss)
+	s.ssdp = ss
 
 	ss.Location = s.makeSSDPLocation
 	ss.ServerDesc = fmt.Sprintf("UPnP/1.0 %s", s.ServerName)

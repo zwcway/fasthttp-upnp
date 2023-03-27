@@ -37,13 +37,15 @@ func playing(ctx context.Context) {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uuids := map[string]string{}
-	for _, n := range []string{"我是DLNA", "备用DLNA"} {
-		uuids[utils.MakeUUID(n)] = n
-	}
-	upnpSrv, err := upnp.NewDeviceServers(ctx, uuids)
+	upnpSrv, err := upnp.NewDeviceServer(ctx)
 	if err != nil {
 		return
+	}
+	uuids := map[string]string{}
+	for _, n := range []string{"我是DLNA", "备用DLNA"} {
+		uuid := utils.MakeUUID(n)
+		uuids[uuid] = n
+		upnpSrv.AddServer(n, uuid, "")
 	}
 	upnpSrv.DeviceType = service.DeviceType_MediaRenderer
 	upnpSrv.ServerName = "UPnPServer/1.0"
@@ -90,7 +92,15 @@ func main() {
 		{IP: net.ParseIP("10.2.2.24"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
 		{IP: net.ParseIP("10.2.2.113"), Mask: net.IPv4Mask(0xFF, 0xFF, 0xFF, 0xFF)},
 	}
-	upnpSrv.ErrorChan = make(chan error, 10)
+	upnpSrv.ErrorHandler = func(err error) {
+		if ssdp.IsIPDenyError(err) {
+			return
+		}
+		fmt.Println(err)
+	}
+	upnpSrv.InfoHandler = func(s string) {
+		fmt.Println(s)
+	}
 	upnpSrv.BeforeRequestHandle = func(ctx *fasthttp.RequestCtx) bool {
 		fmt.Println("from", ctx.RemoteAddr(), ctx.Request.String())
 		return true
@@ -120,13 +130,6 @@ func main() {
 			cancel()
 			upnpSrv.Close()
 			return
-		case err := <-upnpSrv.ErrorChan:
-			if ssdp.IsIPDenyError(err) {
-				break
-			}
-			fmt.Println(err)
-		case err := <-upnpSrv.InfoChan:
-			fmt.Println(err)
 		}
 	}
 

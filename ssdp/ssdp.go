@@ -29,6 +29,7 @@ type multiConn struct {
 type SSDPServer interface {
 	Init(ifaces []*net.Interface) error
 	ListenAndServe() error
+	SetUUIDs([]string)
 	Close()
 }
 type ssdpServer struct {
@@ -101,9 +102,9 @@ func (s *ssdpServer) Init(ifaces []*net.Interface) error {
 	if s.InterfaceAddrsFilter == nil {
 		s.InterfaceAddrsFilter = func(iface *net.Interface, ip net.IP) bool { return true }
 	}
-	if len(s.uuids) == 0 {
-		return fmt.Errorf("uuid can not empty")
-	}
+	// if len(s.uuids) == 0 {
+	// 	return fmt.Errorf("uuid can not empty")
+	// }
 
 	s.ServerDesc = fmt.Sprintf("%s/%s %s", runtime.GOOS, runtime.Version(), s.ServerDesc)
 
@@ -146,6 +147,10 @@ func NewSSDPServer(ctx context.Context, ifaces []*net.Interface, uuids []string)
 	err := s.Init(ifaces)
 
 	return s, err
+}
+
+func (s *ssdpServer) SetUUIDs(uuids []string) {
+	s.uuids = uuids
 }
 
 func (s *ssdpServer) Close() {
